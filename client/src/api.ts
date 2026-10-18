@@ -43,7 +43,7 @@ export class ChessApiError extends Error {
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(init.body != null ? { 'Content-Type': 'application/json' } : {}),
     ...(init.headers as Record<string, string> | undefined),
   };
   let res: Response;

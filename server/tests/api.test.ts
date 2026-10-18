@@ -321,3 +321,15 @@ describe('puzzle-driven mastery', () => {
     expect(reduced).toBeLessThan(after);
   });
 });
+
+describe('session planning for a brand-new student', () => {
+  it('does not shorten a 20-minute session to a single lesson', async () => {
+    const start = await app.inject({ method: 'POST', url: '/api/sessions/start', payload: { minutes: 20 } });
+    expect(start.statusCode).toBe(200);
+    const { plan } = start.json();
+    expect(plan.length).toBeGreaterThanOrEqual(8);
+    expect(plan.length).toBeLessThanOrEqual(10);
+    expect(new Set(plan.filter((x: { kind: string }) => x.kind === 'puzzle').map((x: { refId: string }) => x.refId)).size)
+      .toBe(plan.filter((x: { kind: string }) => x.kind === 'puzzle').length);
+  });
+});

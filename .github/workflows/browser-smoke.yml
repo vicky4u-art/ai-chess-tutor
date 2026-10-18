@@ -1,0 +1,47 @@
+name: Real Chromium UI smoke test
+on:
+  push:
+    branches: ['test/mobile-browser-smoke']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PORT: '3101'
+      APP_TOKEN: 'ui-smoke-test-token'
+      UI_TEST_TOKEN: 'ui-smoke-test-token'
+      UI_TEST_URL: 'http://127.0.0.1:3101'
+      LIVE_SITE_URL: 'https://chess-tutor-production-9f32.up.railway.app'
+      AI_PROVIDER: ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm install --no-save --package-lock=false playwright@1.56.1
+      - run: npx playwright install --with-deps chromium
+      - name: Start test server with empty SQLite database
+        run: |
+          mkdir -p "$RUNNER_TEMP/chess-tutor-ui-db"
+          DATA_DIR="$RUNNER_TEMP/chess-tutor-ui-db" npm start > "$RUNNER_TEMP/chess-tutor-ui.log" 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:3101/api/health; then exit 0; fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/chess-tutor-ui.log"
+          exit 1
+      - run: node scripts/ui-smoke.mjs
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chess-tutor-ui-screenshots
+          path: ui-artifacts/
+          if-no-files-found: ignore
+      - if: failure()
+        run: cat "$RUNNER_TEMP/chess-tutor-ui.log" || true
