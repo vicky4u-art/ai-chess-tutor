@@ -226,33 +226,33 @@ export const LESSONS: Lesson[] = [
     conceptId: "kpk-endgame",
     level: 1,
     title: "King & Pawn Endgames: Opposition and the Square",
-    objective: "Use the square rule to judge pawn races and the opposition to shepherd a pawn through.",
+    objective: "Judge pawn races with the square rule, advance passed pawns safely, and recognize opposition.",
     exerciseIds: ["ex-kpk-1", "ex-kpk-2", "ex-kpk-3", "ex-kpk-4"],
     contentMd: [
-      "King and pawn endgames are pure calculation, and two tools solve most of them. The square rule: draw a square from the pawn to its promotion square (for a pawn on d4 promoting on d8, the square is d4-d8-h8-h4). If the enemy king is inside the square, it catches the pawn; if outside, the pawn queens. Count with the move: if it is your move, the square effectively shrinks by one.",
+      "King-and-pawn endings often come down to exact tempi. The square rule helps with an unsupported passed pawn: draw a square from the pawn's current square to its promotion rank. If the defending king can step into that square on its turn, it may catch the pawn. For a white d-pawn on d4, the square runs from d4 to d8 and across to h8 and h4. Count the moves carefully; the side to move matters.",
       "",
-      "The opposition: when the kings stand on the same file, rank, or diagonal with one square between them, the side NOT to move has the opposition, and the side to move must give way. With a pawn on the sixth rank, getting your king to a key square (d6, e6, f6 for an e-pawn) in front of the pawn wins regardless of who moves. The winning technique is almost always: king in front of the pawn, opposition at the critical moment, pawn advances under the king's escort.",
+      "Opposition is a king maneuver rather than a guarantee of victory. When the kings face one another along a file with one square between them, the side not to move has direct opposition. Diagonal and distant opposition also exist, but their value depends on the pawn position and available moves. A king directly in front of the enemy pawn can sometimes force a draw even when the attacker gains opposition.",
       "",
-      "Three habits: (1) In pawn races, count, don't guess; use the square. (2) Keep your king ahead of your pawn, not behind it. (3) When in doubt, take the opposition before pushing; a premature pawn push often lets the enemy king slip in front and draw.",
+      "Remember that the important squares change as pawns advance. For a white e-pawn on e4, key squares normally lie ahead on d6, e6 and f6; once it reaches e5 or e6, the target squares shift farther forward. Exception cases such as rook pawns demand additional care. Never declare a win merely because a king move looks like opposition.",
       "",
-      "The exercises test the square rule in a race, the diagonal opposition that wins a pawn endgame, pushing when the pawn outruns the king, and the basic vocabulary question: who has the opposition? Endgames reward precision; there are no style points, only correct moves.",
+      "In practice you will evaluate a pawn race, push a remote passer, and identify which side has opposition. Before moving, ask whether the defending king can catch or blockade your pawn. Precise king placement matters more than memorizing one attractive-looking move.",
     ].join("\n"),
   },
   {
     id: "lesson-rook-endgame",
     conceptId: "rook-endgame",
     level: 1,
-    title: "Rook Endgames: The Seventh Rank, Lucena, Philidor",
-    objective: "Activate the rook, build the Lucena bridge, and hold the Philidor draw.",
+    title: "Rook Endgames: Active Rooks and Forcing Checks",
+    objective: "Use open files, active rook checks, the seventh rank, and coordinated king-and-rook play.",
     exerciseIds: ["ex-re-1", "ex-re-2", "ex-re-3", "ex-re-4"],
     contentMd: [
-      "Rook endgames are the most common endgames in practice, and technique matters more than calculation. The attacking ideas: get your rook to the seventh rank, where it attacks pawns and restricts the enemy king; cut the enemy king off from the pawn with your rook; and keep your rook active, checking from behind rather than passively defending.",
+      "Rook endings reward activity. A rook on an open file can penetrate into the enemy position; a rook on the seventh rank may threaten several pawns at once. But those principles never override tactics. Before parking a rook on an attractive square, check whether it can be captured or whether another move gives a forcing checkmate.",
       "",
-      "The Lucena position (king + rook + pawn vs king + rook, pawn on the seventh, your king in front of it) is the fundamental win. The method is the bridge: get your rook to the fourth rank (counting from your side), then walk the king out from behind the pawn while the rook shields it from checks: Rh4, and after the checks, Kg3-g2-g1 with the rook on g4 covering. Memorize the shape, not the move order: rook on the fourth, king steps out, promote.",
+      "Active checks are especially valuable. If a rook can check the enemy king with tempo, the king may have to step away from defending its own rook or pawn. When analyzing a rook move, list the opponent's legal replies. A rook check is not automatically mate: an unoccupied escape square on the seventh rank can save the king.",
       "",
-      "The Philidor position is the fundamental draw: defending rook + king vs rook + pawn. Keep your rook on the third rank (from your side), checking the enemy king from behind whenever it advances, and keep your king in front of the pawn. Never let your rook get trapped on the back rank and never push the pawn's... rather, never allow the attacking king to reach the sixth rank with your king cut off.",
+      "When you have a passed pawn, a rook behind it often supports its advance. When defending, attack the pawn from the side or rear while keeping your rook mobile. More advanced rook endings include the Lucena winning method, where the stronger side builds a fourth-rank bridge, and the Philidor drawing method, where the defender keeps the king in front of the pawn and uses a checking rook. The exact piece placement is essential; naming a position Lucena does not make it one.",
       "",
-      "In the exercises you will seize the seventh rank, finish the basic rook-and-king mate, build the Lucena bridge (Rg4!), and recognize a well-placed rook on an open file. Rook endings are won by activity and lost by passivity.",
+      "These exercises practice seizing the seventh rank, coordinating king and rook for mate, delivering a tactical rook check, and recognizing an active rook on an open file. Their aim is to cultivate sound rook activity and accurate checks before moving on to technical endgame positions.",
     ].join("\n"),
   },
   {
@@ -263,13 +263,13 @@ export const LESSONS: Lesson[] = [
     objective: "Simplify when winning, complicate when worse, choose the safe win, and manage risk.",
     exerciseIds: ["ex-dec-1", "ex-dec-2", "ex-dec-3", "ex-dec-4"],
     contentMd: [
-      "Winning a won position is a separate skill from getting one. The practical rules: when you are a piece up, trade pieces, especially queens and rooks; every exchange reduces the opponent's counterplay and your own blunder surface. Choose the safe win over the brilliant one: a forced simplification into a winning endgame beats a speculative attack that could go wrong.",
+      "Practical decision-making begins with a tactical check: before applying a strategic rule, look for checks, captures and threats. When clearly ahead in material, trading pieces often makes a win easier, but only when the exchange preserves your advantage. It is never correct to ignore a forced mate or miss a hanging queen merely because you were looking for an equal trade.",
       "",
-      "When you are worse, invert the rules. Avoid simplification; keep pieces on the board, especially queens, because complications are your lottery ticket. Attack the stronger side's king, push passed pawns, and set problems. Many lost positions are saved not by perfect defense but by making the win as difficult as possible.",
+      "When you are materially worse, avoid giving away more material and look for active counterplay. Keeping queens and rooks can preserve chances, but do not refuse every exchange by reflex. If an exchange is the only way to stop an immediate mate, calculate it seriously. A rook that enters an open file may be captured from the other end; count the opponent's attacks on the destination square before moving.",
       "",
-      "Risk management also means knowing when NOT to calculate deeply. In a clearly winning endgame, play the solid centralizing move rather than the flashy tactic. In time trouble, prefer moves that do not lose outright over moves that might win brilliantly. And always, before the final blow, check for stalemate: the most painful way to throw a win is to leave the enemy king with no legal moves.",
+      "An active defensive rook can attack dangerous passed pawns and force the stronger player to spend time defending. Changing files on the first rank may be safer than advancing on a file controlled by the opponent. A good practical move reduces threats while keeping useful options, even if no quick win is possible.",
       "",
-      "The exercises are pure judgment: trade rooks a piece up, refuse the simplifying trade a pawn down, take the safe queen trade instead of the adventure, and confirm the practical rule explicitly. Technique is just good decisions repeated.",
+      "In these exercises you will simplify with an extra minor piece, find safe rook activity when down a pawn, win a loose queen, and judge whether a rook exchange is favorable. The goal is to make defensible decisions grounded in the actual board, not to apply slogans without calculation.",
     ].join("\n"),
   },
 ];
@@ -402,12 +402,12 @@ export const EXERCISES: Exercise[] = [
     prompt: "Black to move (1. e4 e5 2. Nf3). Is 2...Qh4 a good developing move?",
     solutionUci: ["no"],
     hints: [
-      "Ask what the queen does on h4: does it threaten anything real, and what does it cost?",
-      "The queen attacks nothing decisive, and White gains time against it while developing.",
-      "No. It brings the queen out before the minor pieces, violating the knights-before-bishops-before-queen order, and achieves nothing.",
+      "The knight on f3 already attacks h4, which is where Black plans to place the queen.",
+      "After 2...Qh4??, the white knight can jump from f3 to h4 and capture the black queen.",
+      "No. 2...Qh4?? simply loses the queen to 3. Nxh4.",
     ],
     explanation:
-      "No. 2...Qh4 breaks the development order for no benefit: the queen will be chased while Black's knights and bishops sit home. Good developing moves after 2. Nf3 are 2...Nc6, 2...Nf6, or 2...d6.",
+      "No. After 1. e4 e5 2. Nf3, the white knight on f3 directly attacks h4. Therefore 2...Qh4?? loses the queen to 3. Nxh4. More normal answers such as ...Nc6 or ...Nf6 develop without hanging the queen.",
     difficulty: 16,
   },
 
@@ -698,7 +698,7 @@ export const EXERCISES: Exercise[] = [
       "1. Qe8# ends the game: the black king cannot move off the back rank or block.",
     ],
     explanation:
-      "1. Qe8# is checkmate. The queen checks on the eighth rank and covers f8 and h8; the pawns on f7, g7, and h7 prevent the king from escaping forward. Unlike the previous faulty example, no enemy rook on f8 can capture the queen. Always calculate the defender's actual replies before announcing a mate.",
+      "1. Qe8# is checkmate. The queen checks on the eighth rank and covers f8 and h8; the pawns on f7, g7, and h7 prevent the king from escaping forward. No enemy rook on f8 can capture the queen. Always calculate the defender's actual replies before announcing a mate.",
     difficulty: 38,
   },
   {
@@ -1122,7 +1122,7 @@ export const EXERCISES: Exercise[] = [
       "Play e5, then keep advancing toward e8 with support from your king if needed.",
     ],
     explanation:
-      "1. e5 pushes the passed pawn closer to promotion, while the black king is too far away to stop it with optimal play. The previous example wrongly asserted that Ke3 won an opposition ending; the old position was drawn and Black could capture the pawn. This example avoids that false winning claim.",
+      "1. e5 pushes the passed pawn closer to promotion, while the black king is too far away to stop it with optimal play. Opposition is not involved in this simple race: the black king's distance from the pawn is decisive.",
     difficulty: 50,
   },
   {
@@ -1274,7 +1274,7 @@ export const EXERCISES: Exercise[] = [
       "Play Qxd8+, taking the queen outright and checking the king along the eighth rank.",
     ],
     explanation:
-      "1. Qxd8+ captures Black's unprotected queen and checks the king on g8. This is a direct tactical win of the queen, not the trade 1...Rxd8 described previously: Black has no rook in the position. Always verify which pieces actually exist before predicting a recapture.",
+      "1. Qxd8+ captures Black's unprotected queen and checks the king on g8. This is a direct tactical win of the queen, not a queen exchange: Black has no rook that can recapture. Always verify which pieces actually exist before predicting a recapture.",
     difficulty: 64,
   },
   {
