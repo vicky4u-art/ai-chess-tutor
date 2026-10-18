@@ -89,12 +89,19 @@ export function Puzzles() {
     } catch {
       return false;
     }
-    if (playedUci !== expected) {
+    const alternateMate = puzzle.themes.includes('mateIn1') && (() => {
+      try {
+        const g = new Chess(boardFen);
+        g.move({ from, to, promotion });
+        return g.isCheckmate();
+      } catch { return false; }
+    })();
+    if (playedUci !== expected && !alternateMate) {
       setFailed(true);
       submit(false, outcome(), [playedUci]);
       return true; // accept the move visually, then reveal
     }
-    const next = [...applied, puzzle.solutionUci[applied.length]];
+    const next = [...applied, alternateMate ? playedUci : puzzle.solutionUci[applied.length]];
     setApplied(next);
     if (next.length >= puzzle.solutionUci.length) {
       setSolved(true);
@@ -177,7 +184,12 @@ export function Puzzles() {
             <p className={`font-medium ${solved ? 'text-emerald-300' : 'text-red-300'}`}>
               {solved ? (hintLevel === 0 ? 'Solved independently.' : 'Solved with hints.') : 'Puzzle missed.'}
             </p>
-            <p className="text-sm text-slate-300 leading-relaxed">{puzzle.explanation}</p>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              {solved && applied[0] !== puzzle.solutionUci[0] && puzzle.themes.includes('mateIn1')
+                ? 'Your move is also checkmate. The author's example takes a different route: '
+                : ''}
+              {puzzle.explanation}
+            </p>
             <Btn onClick={load} className="w-full">
               Next puzzle
             </Btn>
