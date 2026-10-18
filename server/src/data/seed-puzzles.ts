@@ -23,7 +23,7 @@ export const SEED_PUZZLES: Puzzle[] = [
   { id: "seed-003", sourceId: "seed", fen: "6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1", solutionUci: ["a1a8"], rating: 610, themes: ["mate", "mateIn1", "backRankMate"] },
   { id: "seed-004", sourceId: "seed", fen: "6k1/5ppp/8/8/8/8/8/3Q2K1 w - - 0 1", solutionUci: ["d1d8"], rating: 630, themes: ["mate", "mateIn1", "backRankMate"] },
   { id: "seed-005", sourceId: "seed", fen: "6k1/5ppp/8/8/8/8/8/Q5K1 w - - 0 1", solutionUci: ["a1a8"], rating: 640, themes: ["mate", "mateIn1", "backRankMate"] },
-  { id: "seed-006", sourceId: "seed", fen: "7k/5ppp/8/8/8/8/5PQP/6RK w - - 0 1", solutionUci: ["g2g7"], rating: 780, themes: ["mate", "mateIn1"] },
+  { id: "seed-006", sourceId: "seed", fen: "7k/5ppp/8/8/8/5N2/5PQP/6RK w - - 0 1", solutionUci: ["g2g7"], rating: 780, themes: ["mate", "mateIn1"] },
   { id: "seed-007", sourceId: "seed", fen: "6k1/5ppp/8/8/8/8/5PPP/1R4K1 w - - 0 1", solutionUci: ["b1b8"], rating: 660, themes: ["mate", "mateIn1", "backRankMate"] },
   { id: "seed-008", sourceId: "seed", fen: "6k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1", solutionUci: ["d1d8"], rating: 650, themes: ["mate", "mateIn1", "backRankMate"] },
   { id: "seed-009", sourceId: "seed", fen: "4r1k1/5ppp/8/8/8/8/5PPP/4R1K1 w - - 0 1", solutionUci: ["e1e8"], rating: 720, themes: ["mate", "mateIn1", "backRankMate"] },
