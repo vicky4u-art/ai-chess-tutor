@@ -655,16 +655,17 @@ export const EXERCISES: Exercise[] = [
     conceptId: "tactics",
     kind: "choose-move",
     fen: "4k3/8/8/8/4N3/8/5PPP/4R1K1 w - - 0 1",
-    prompt: "White to move. Find the crushing discovered check.",
+    prompt: "White to move. Which knight move gives a double check (rook and knight together)?",
     solutionUci: ["e4f6"],
+    acceptableUci: [["e4d6"]],
     choices: ["e4f6", "e4d6", "e4c5", "e1e2"],
     hints: [
       "A discovered attack uncovers a line piece. If the knight moves from e4, what opens?",
-      "Nothing yet, but Nf6+ is check from the knight AND uncovers Re1 on the e-file: a double check.",
-      "Play 1. Nf6+. Double check forces the king to move, and White's initiative becomes overwhelming.",
+      "Nf6+ and Nd6+ both check with the knight and uncover the rook on the e-file.",
+      "Both 1. Nf6+ and 1. Nd6+ are double checks. In either case, Black must move the king.",
     ],
     explanation:
-      "1. Nf6+ is a double check: the knight checks from f6 and uncovers the rook's attack down the e-file. Against a double check the king must move, and Black's position collapses. The quiet knight moves miss the forcing idea entirely.",
+      "Both 1. Nf6+ and 1. Nd6+ are double checks: the knight itself attacks the king on e8 and also uncovers Re1's check along the e-file. Black must respond with a king move. A sound chess tutor must accept both solutions; 1. Nc5+ is only a discovered rook check, not a double check.",
     difficulty: 38,
   },
   {
@@ -690,31 +691,32 @@ export const EXERCISES: Exercise[] = [
     conceptId: "calculation",
     kind: "find-move",
     fen: "6k1/5ppp/8/8/8/8/5PPP/R3Q1K1 w - - 0 1",
-    prompt: "White to move. Look at the forcing checks and find the immediate checkmate.",
+    prompt: "White to move. Find a checkmate in one move (more than one answer may work).",
     solutionUci: ["e1e8"],
+    acceptableUci: [["a1a8"]],
     hints: [
       "The king on g8 is trapped behind f7, g7, and h7.",
       "A queen check on the eighth rank covers both potential king escapes.",
-      "1. Qe8# ends the game: the black king cannot move off the back rank or block.",
+      "Play 1. Qe8# or 1. Ra8#. Either rook or queen can deliver the back-rank mate.",
     ],
     explanation:
-      "1. Qe8# is checkmate. The queen checks on the eighth rank and covers f8 and h8; the pawns on f7, g7, and h7 prevent the king from escaping forward. No enemy rook on f8 can capture the queen. Always calculate the defender's actual replies before announcing a mate.",
+      "Both 1. Qe8# and 1. Ra8# are checkmates. Either line piece controls the eighth rank, while Black's f7/g7/h7 pawns obstruct escape. A puzzle must accept every valid immediate checkmate, not just its example answer.",
     difficulty: 38,
   },
   {
     id: "ex-cal-2",
     conceptId: "calculation",
     kind: "find-move",
-    fen: "r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 1",
-    prompt: "White to move. Calculate: which move wins a pawn in two moves?",
+    fen: "6k1/3p1ppp/2n5/1B2p3/4P3/5N2/5PPP/6K1 w - - 0 1",
+    prompt: "White to move. Remove the knight defending e5, then win the e5-pawn after ...dxc6.",
     solutionUci: ["b5c6"],
     hints: [
-      "The e5 pawn is currently defended by the c6 knight. How do you remove the defender?",
-      "Bxc6 forces ...dxc6 (or ...bxc6), and then the e5 pawn is loose.",
-      "Play 1. Bxc6 dxc6 2. Nxe5, winning the pawn. Calculate the recapture before sacrificing the bishop.",
+      "The c6-knight guards the pawn on e5. White's bishop can capture that knight.",
+      "After Bxc6 dxc6, Black no longer has a knight defending e5.",
+      "Calculate 1. Bxc6 dxc6 2. Nxe5. This trades bishop for knight and gains the e5-pawn.",
     ],
     explanation:
-      "1. Bxc6! removes the defender of e5 (1...dxc6 2. Nxe5 wins the pawn; 1...bxc6 2. Nxe5 does the same). This is a two-move calculation: see the defender, remove it, then take. Always verify the opponent's recapture before giving up the bishop.",
+      "In this simplified position, 1. Bxc6 dxc6 2. Nxe5 trades a bishop for a knight and then wins the undefended e5-pawn. The move is not a free knight: Black recaptures the bishop. Count all exchanges and then identify the extra pawn gained.",
     difficulty: 42,
   },
   {
@@ -1080,7 +1082,7 @@ export const EXERCISES: Exercise[] = [
     conceptId: "exchanges",
     kind: "yes-no",
     fen: "3qr1k1/5ppp/8/8/8/8/5PPP/3Q2K1 w - - 0 1",
-    prompt: "White is down the exchange. Should White trade queens?",
+    prompt: "White is down a rook. Is trading queens generally helpful to the defender here?",
     solutionUci: ["no"],
     hints: [
       "Who benefits from simplification: the player who is ahead or behind?",
@@ -1088,7 +1090,7 @@ export const EXERCISES: Exercise[] = [
       "No. Keep the queens on and fight; trading just converts Black's advantage cleanly.",
     ],
     explanation:
-      "No. Exchanges favor the side that is ahead, so the side that is worse must refuse them. This is the single most practical exchange rule: trade when winning, avoid trades when losing.",
+      "Usually not: White is down a rook, so exchanging queens would leave Black with an extra rook in a simplified ending. Keeping queens offers more chances for threats and checks. This is a guideline, not an absolute law: a concrete tactic or forced draw can make a trade worthwhile.",
     difficulty: 38,
   },
 
