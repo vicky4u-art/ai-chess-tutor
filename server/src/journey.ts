@@ -49,9 +49,12 @@ export function journeyOverview(db: DatabaseSync): JourneyOverview {
   });
   const choices=items.filter(x=>x.status==='active'||x.status==='ready');
   choices.sort((a,b)=>(a.status==='active'?0:a.bestScore>0?1:2)-(b.status==='active'?0:b.bestScore>0?1:2)||a.order-b.order);
-  const review=items.find(x=>x.reviewSuggested);
+  const review=items.filter(x=>x.reviewSuggested).sort((a,b)=>a.mastery-b.mastery)[0];
+  const active=choices.find(x=>x.status==='active');
+  // A shaky pass unlocks prerequisites but recommends immediate reinforcement.
+  // Already-active practice takes precedence so a learner can finish a round.
   return {goal:1200,lessons:items.map(({order,...rest})=>rest),
-    recommendedConceptId:choices[0]?.conceptId??review?.conceptId??null,
+    recommendedConceptId:active?.conceptId??review?.conceptId??choices[0]?.conceptId??null,
     completedCount:completed.size,totalCount:CONCEPTS.length};
 }
 function readRound(db:DatabaseSync,round:R):JourneyRound {
