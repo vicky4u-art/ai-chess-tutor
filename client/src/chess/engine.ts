@@ -72,7 +72,9 @@ export class StockfishEngine {
       }
       let worker: Worker;
       try {
-        worker = new Worker('engine/stockfish.js');
+        // stockfish.wasm exposes Stockfish() factory, NOT a UCI command worker.
+        // A bridge script loads the factory and forwards UCI commands/events.
+        worker = new Worker('/engine/stockfish-bridge.js');
       } catch (e) {
         reject(new Error(`Engine unavailable: could not start worker (${(e as Error).message}).`));
         return;
@@ -87,6 +89,13 @@ export class StockfishEngine {
       let sawUciOk = false;
       worker.onmessage = (ev: MessageEvent) => {
         const line = String(ev.data);
+        if (line.startsWith('engine-error:')) {
+          clearTimeout(timer);
+          const err = new Error('Engine unavailable: ' + line.slice('engine-error:'.length));
+          this.fail(err);
+          reject(err);
+          return;
+        }
         if (!sawUciOk && line === 'uciok') {
           sawUciOk = true;
           worker.postMessage('isready');
