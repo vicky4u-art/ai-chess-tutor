@@ -125,7 +125,7 @@ export function registerJourneyRoutes(app:FastifyInstance,db:DatabaseSync):void 
     const outcome:AttemptOutcome=!correct?'shown':hints?'hinted':'independent';
     transaction(db,()=>{
       db.prepare('INSERT INTO journey_answers (round_id,exercise_id,played_uci,correct,outcome,hints_used,created_at) VALUES (?,?,?,?,?,?,?)')
-        .run(round.id,b.exerciseId,b.playedUci??null,correct?1:0,outcome,hints,now());
+        .run(round.id,String(b.exerciseId),b.playedUci??null,correct?1:0,outcome,hints,now());
       const prior=db.prepare('SELECT * FROM mastery WHERE concept_id=?').get(id) as R;
       const updated=updateMastery({
         conceptId:id,mastery:Number(prior.mastery),attempts:Number(prior.attempts),
@@ -176,7 +176,7 @@ export function registerJourneyRoutes(app:FastifyInstance,db:DatabaseSync):void 
     const performance=bot+(actual==='win'?165:actual==='loss'?-165:0);
     const estimate=Math.max(300,Math.min(1800,Math.round(previous.estimate===null?performance:previous.estimate*0.7+performance*0.3)));
     db.prepare('INSERT INTO rating_games (id,bot_level,bot_label,result,termination,pgn,moves_uci,player_ms,bot_ms,training_estimate,played_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)')
-      .run(randomUUID(),bot,'Approx. '+bot+' training bot',actual,b.termination,game.pgn(),JSON.stringify(b.movesUci),pms,bms,estimate,now());
+      .run(randomUUID(),bot,'Approx. '+bot+' training bot',actual,String(b.termination),game.pgn(),JSON.stringify(b.movesUci),pms,bms,estimate,now());
     return ratingSummary(db);
   });
 }
