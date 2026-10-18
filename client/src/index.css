@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+/* Base app styling (Tailwind preflight already resets margins/padding). */
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: #020617; /* slate-950 */
+  color: #f1f5f9; /* slate-100 */
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent double-tap zoom on the board while keeping pinch usable elsewhere. */
+#root {
+  touch-action: manipulation;
+}
+
+input,
+textarea,
+button {
+  font: inherit;
+}
