@@ -146,6 +146,24 @@ try {
     await noOverflow('desktop puzzles');
     await shot('desktop-puzzles');
   });
+  if (process.env.LIVE_SITE_URL) {
+    await test('Public Railway deployment serves mobile login screen', async () => {
+      const live = await browser.newContext({
+        viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true,
+      });
+      try {
+        const remote = await live.newPage();
+        const response = await remote.goto(process.env.LIVE_SITE_URL, { waitUntil: 'domcontentloaded', timeout: 20000 });
+        assert.equal(response?.status(), 200, 'Railway root HTTP status');
+        await remote.getByLabel('Access token').waitFor({ timeout: 15000 });
+        const health = await remote.request.get(process.env.LIVE_SITE_URL + '/api/health');
+        assert.equal(health.status(), 200, 'Railway health endpoint status');
+        await remote.screenshot({ path: 'ui-artifacts/live-railway-mobile-login.png', fullPage: true });
+      } finally {
+        await live.close();
+      }
+    });
+  }
 } finally {
   console.log('UI smoke test results: ' + JSON.stringify(results));
   await context?.close().catch(() => {});
