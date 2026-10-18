@@ -152,7 +152,7 @@ export function planSession(
 
   // 2. Teach weakest concepts: one lesson step (lowest unfinished level) then exercises/puzzles in band.
   const usedLessons = new Set<string>();
-  const usedExercises = new Set<string>();
+  const usedExercises = new Set<string>(steps.filter((s) => s.kind === 'review').map((s) => s.refId));
   const usedPuzzles = new Set<string>(steps.filter((s) => s.kind === 'puzzle').map((s) => s.refId));
   for (const c of weakestFirst) {
     if (steps.length >= stepBudget) break;
@@ -175,12 +175,56 @@ export function planSession(
       steps.push({ kind: 'exercise', refId: ex.id, conceptId: c.id, label: `Practice: ${ex.id}` });
     }
     const pz = pzPool.sort((a, b) => a.rating - b.rating)[0];
-    if (pz && steps.length < stepBudget && m.mastery > 0.3) {
+    if (pz && steps.length < stepBudget) {
       usedPuzzles.add(pz.id);
       steps.push({ kind: 'puzzle', refId: pz.id, conceptId: c.id, label: `Puzzle: ${pz.id}` });
     }
   }
 
+  // Early beginners have one unlocked concept, and introductory exercises
+  // can sit outside the pseudo-rating band. Fill the requested session with
+  // distinct, prerequisite-safe practice rather than ending after one lesson.
+  // Favor in-band material and gradually introduce alternatives when needed.
+  const active = weakestFirst.filter((c) => {
+    const m = get(c.id);
+    return !(m.mastery >= 0.85 && m.attempts >= 8);
+  });
+  for (let round = 0; steps.length < stepBudget && round < stepBudget * 2; round++) {
+    let progressed = false;
+    for (const c of active) {
+      if (steps.length >= stepBudget) break;
+      const band = difficultyBand(get(c.id).mastery);
+      const strength = estimatedStrength(get(c.id).mastery);
+      const pool = exercises
+        .filter((e) => e.conceptId === c.id && !usedExercises.has(e.id))
+        .sort((a, b) => Math.abs(a.difficulty * 10 - strength) - Math.abs(b.difficulty * 10 - strength)
+          || a.id.localeCompare(b.id));
+      const pzPool = puzzles
+        .filter((p) => !usedPuzzles.has(p.id) && puzzleConcept(p.themes) === c.id)
+        .sort((a, b) =>
+          Number(!(a.rating >= band.min && a.rating <= band.max)) - Number(!(b.rating >= band.min && b.rating <= band.max))
+          || Math.abs(a.rating - strength) - Math.abs(b.rating - strength)
+          || a.id.localeCompare(b.id));
+      const preferPuzzle = round % 2 === 1;
+      if (preferPuzzle && pzPool.length) {
+        const pz = pzPool[0];
+        usedPuzzles.add(pz.id);
+        steps.push({ kind: 'puzzle', refId: pz.id, conceptId: c.id, label: `Puzzle: ${pz.id}` });
+        progressed = true;
+      } else if (pool.length) {
+        const ex = pool[0];
+        usedExercises.add(ex.id);
+        steps.push({ kind: 'exercise', refId: ex.id, conceptId: c.id, label: `Practice: ${ex.id}` });
+        progressed = true;
+      } else if (pzPool.length) {
+        const pz = pzPool[0];
+        usedPuzzles.add(pz.id);
+        steps.push({ kind: 'puzzle', refId: pz.id, conceptId: c.id, label: `Puzzle: ${pz.id}` });
+        progressed = true;
+      }
+    }
+    if (!progressed) break;
+  }
   return steps.slice(0, stepBudget);
 }
 
