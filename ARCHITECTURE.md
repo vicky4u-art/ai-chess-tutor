@@ -6,7 +6,7 @@
 ┌─────────────────────────────────────────────────────────────┐
 │ Browser (React + Vite + Tailwind)                           │
 │  - react-chessboard board UI                                │
-│  - Stockfish in Web Worker  ← client-side analysis          │
+│  - Stockfish WASM browser runtime  ← client-side analysis          │
 │  - sends FEN + engine read to server for tutor context      │
 └───────────────┬─────────────────────────────────────────────┘
                 │  HTTP JSON (/api/*)
@@ -42,12 +42,12 @@
 
 1. Client requests lesson/exercise/puzzle → server reads SQLite → JSON.
 2. Learner attempts a move → client sends attempt → server updates mastery via `learning.ts`, schedules spaced review.
-3. Game analysis: PGN upload → server parses → client Stockfish (Web Worker) produces evals → server classifies moves (`classify`) and links concepts (`linkConcepts`) → stored in `game_moves`.
+3. Game analysis: PGN upload → server parses → client Stockfish WASM produces evals → server classifies moves (`classify`) and links concepts (`linkConcepts`) → stored in `game_moves`.
 4. Tutor chat: client sends messages + FEN + optional engine read → server injects learner context (weak concepts, never client-claimed mastery) → provider → chess.js validates any moves in the reply → client.
 
-## Stockfish in Web Worker
+## Stockfish WASM browser runtime
 
-The engine runs entirely in the browser (Web Worker, WASM build from npm). No server CPU is spent on analysis, no engine traffic crosses the network, and analysis works offline once loaded. The client may attach its engine read (`bestUci`, `evalCp`, `depth`) to tutor-chat requests as context.
+The engine runs entirely in the browser (Stockfish() WASM factory with vendor-managed worker threads; loaded from /engine/stockfish.js). No server CPU is spent on analysis, no engine traffic crosses the network, and analysis works offline once loaded. The client may attach its engine read (`bestUci`, `evalCp`, `depth`) to tutor-chat requests as context.
 
 ## Server AI provider abstraction
 
