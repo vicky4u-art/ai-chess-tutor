@@ -74,6 +74,15 @@ function playMoves(fen, ucis) {
   return { ok: true, chess: c };
 }
 
+/** A legal study position cannot have the *nonmoving* king in check.
+ *  chess.js parses such FENs, but no legal previous move can produce them. */
+function impossibleCheck(fen) {
+  const c = new Chess(fen);
+  const other = c.turn() === 'w' ? 'b' : 'w';
+  const oppKing = c.board().flat().find((p) => p?.type === 'k' && p.color === other);
+  return !oppKing || c.isAttacked(oppKing.square, c.turn());
+}
+
 const isYesNo = (e) => e.kind === "yes-no";
 
 // ---------------- Exercises ----------------
@@ -85,6 +94,13 @@ const isYesNo = (e) => e.kind === "yes-no";
     if (!e.id || seen.has(e.id)) fail(`${tag}: duplicate or missing id`);
     seen.add(e.id);
     if (!validKinds.has(e.kind)) fail(`${tag}: bad kind ${e.kind}`);
+    try {
+      if (impossibleCheck(e.fen)) fail(`${tag}: impossible starting position: nonmoving king is already in check`);
+    } catch (err) {
+      fail(`${tag}: invalid board: ${err.message}`);
+      continue;
+    }
+
     if (typeof e.prompt !== "string" || !e.prompt.trim()) fail(`${tag}: empty prompt`);
     if (!Array.isArray(e.solutionUci) || e.solutionUci.length === 0) fail(`${tag}: empty solutionUci`);
     if (!Array.isArray(e.hints) || e.hints.length !== 3 || e.hints.some((h) => typeof h !== "string" || !h.trim()))
@@ -97,16 +113,20 @@ const isYesNo = (e) => e.kind === "yes-no";
       if (e.solutionUci.length !== 1 || !["yes", "no"].includes(e.solutionUci[0]))
         fail(`${tag}: yes-no solutionUci must be ["yes"] or ["no"]`);
       // Still require a parsable FEN so the board renders.
-      try {
-        new Chess(e.fen);
-      } catch (err) {
-        fail(`${tag}: FEN parse failed: ${err.message}`);
+      const c = new Chess(e.fen);
+      if (/is this stalemate\?/i.test(e.prompt) && (e.solutionUci[0] === 'yes') !== c.isStalemate()) {
+        fail(`${tag}: stalemate answer does not match the actual chess position`);
       }
       continue;
     }
 
     const r = playMoves(e.fen, e.solutionUci);
     if (!r.ok) fail(`${tag}: ${r.error}`);
+    if (r.ok && /mate in (?:one|1)|which move checkmates|mates immediately|immediate checkmate|deliver checkmate/i.test(e.prompt)
+        && !r.chess.isCheckmate()) {
+      fail(`${tag}: claimed one-move mate is not checkmate on the board`);
+    }
+
 
     if (e.kind === "choose-move") {
       if (!Array.isArray(e.choices) || e.choices.length !== 4)
@@ -182,6 +202,12 @@ const isYesNo = (e) => e.kind === "yes-no";
       fail(`${tag}: rating ${p.rating} outside 600-1800`);
     if (!Array.isArray(p.themes) || p.themes.length === 0) fail(`${tag}: empty themes`);
 
+    try {
+      if (impossibleCheck(p.fen)) fail(`${tag}: impossible starting position: nonmoving king already in check`);
+    } catch (err) {
+      fail(`${tag}: invalid FEN: ${err.message}`);
+      continue;
+    }
     const r = playMoves(p.fen, p.solutionUci);
     if (!r.ok) {
       fail(`${tag}: ${r.error}`);
