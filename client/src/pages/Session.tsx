@@ -51,12 +51,19 @@ function PuzzleStep({ puzzle, onDone }: { puzzle: PuzzleDetail; onDone: (solved:
       const { from: f, to: t, promotion: pr } = uciParts(played);
       g.move({ from: f, to: t, promotion: pr });
     } catch { return false; }
-    if (played !== expected) {
+    const alternateMate = puzzle.themes.includes('mateIn1') && (() => {
+      try {
+        const candidate = new Chess(boardFen);
+        candidate.move({ from, to, promotion });
+        return candidate.isCheckmate();
+      } catch { return false; }
+    })();
+    if (played !== expected && !alternateMate) {
       setFailed(true);
       finishOnce(false, hintLevel === 0 ? 'independent' : 'hinted', [played]);
       return true;
     }
-    const next = [...applied, puzzle.solutionUci[applied.length]];
+    const next = [...applied, alternateMate ? played : puzzle.solutionUci[applied.length]];
     // Auto-play the single opponent reply (solution alternates learner/opponent).
     if (next.length < puzzle.solutionUci.length) {
       next.push(puzzle.solutionUci[next.length]);
@@ -88,7 +95,12 @@ function PuzzleStep({ puzzle, onDone }: { puzzle: PuzzleDetail; onDone: (solved:
           ))}
         </div>
       )}
-      {done && <p className="text-sm text-slate-300 mt-2">{puzzle.explanation}</p>}
+      {done && <p className="text-sm text-slate-300 mt-2">
+        {solved && applied[0] !== puzzle.solutionUci[0] && puzzle.themes.includes('mateIn1')
+          ? 'Your move is also mate. The example solution uses a different mating move. '
+          : ''}
+        {puzzle.explanation}
+      </p>}
     </Card>
   );
 }
