@@ -1,0 +1,67 @@
+#!/usr/bin/env node
+// Diagnostic-only audit. Requires system Stockfish and installed chess.js.
+import { readFileSync } from 'node:fs';
+import { spawn } from 'node:child_process';
+import { createInterface } from 'node:readline';
+import { Chess } from 'chess.js';
+function load(name) {
+  let s=readFileSync('server/src/data/curriculum.ts','utf8');
+  s=s.replace(/^import type .*$/gm,'').replace(/export const (\w+): \w+\[\] =/g,'const $1 =');
+  return new Function(s+'; return '+name+';')();
+}
+const EXERCISES=load('EXERCISES');
+const bin=process.env.STOCKFISH_BIN || '/usr/games/stockfish';
+const sf=spawn(bin,[],{stdio:['pipe','pipe','pipe']});
+sf.stderr.on('data',d=>process.stderr.write(d));
+const lines=createInterface({input:sf.stdout});
+let active=null;
+lines.on('line',line=>{
+  if(!active)return;
+  if(line.startsWith('info ')&&line.includes(' score ')){
+    const m=line.match(/ score (cp|mate) (-?\d+)/);
+    if(m){active.score=m[1]==='mate'?(Number(m[2])>0?100000-Number(m[2]):-100000-Number(m[2])):Number(m[2]);active.mate=m[1]==='mate'?Number(m[2]):null;}
+  }
+  if(line.startsWith('bestmove ')){
+    const a=active;active=null;clearTimeout(a.timer);
+    a.resolve({best:line.split(' ')[1],cp:a.score,mate:a.mate});
+  }
+});
+function analyze(fen,movetime=150){
+  return new Promise((resolve,reject)=>{
+    if(active)throw Error('concurrent stockfish call');
+    const obj={resolve,reject,score:null,mate:null,timer:null};
+    obj.timer=setTimeout(()=>{active=null;reject(Error('timeout '+fen));},5000);
+    active=obj;sf.stdin.write('position fen '+fen+'\ngo movetime '+movetime+'\n');
+  });
+}
+const all=[];
+for(const e of EXERCISES){
+  const c=new Chess(e.fen);
+  const color=c.turn(),opp=color==='w'?'b':'w';
+  let oppKing=null;
+  for(const row of c.board())for(const sq of row)if(sq?.type==='k'&&sq.color===opp)oppKing=sq.square;
+  const invalidPre=oppKing?c.isAttacked(oppKing,color):false;
+  const legal=c.moves({verbose:true});
+  let result={id:e.id,concept:e.conceptId,kind:e.kind,prompt:e.prompt,solution:e.solutionUci?.join(' '),fen:e.fen,invalidPre,legal:legal.length,whiteInCheck:color==='w'&&c.isCheck(),turn:color};
+  if(e.kind!=='yes-no'){
+    result.current=await analyze(c.fen(),170);
+    try{
+      const move=e.solutionUci[0];
+      c.move({from:move.slice(0,2),to:move.slice(2,4),promotion:move[4]});
+      result.givesMate=c.isCheckmate();
+      result.givesCheck=c.isCheck();
+      result.after= c.isGameOver()?{best:'gameover',cp:c.isCheckmate()?-100000:0,mate:c.isCheckmate()?-1:null}:await analyze(c.fen(),170);
+      result.cpLoss=result.current.cp==null||result.after.cp==null?null:result.current.cp+result.after.cp;
+    }catch(err){result.error=String(err);}
+    if(e.kind==='choose-move'){
+      const mates=[];
+      for(const choice of e.choices??[]){const g=new Chess(e.fen);g.move({from:choice.slice(0,2),to:choice.slice(2,4),promotion:choice[4]});if(g.isCheckmate())mates.push(choice);}
+      result.mateChoices=mates;
+    }
+  }else{
+    result.check=c.isCheck();result.stalemate=c.isStalemate();result.checkmate=c.isCheckmate();
+  }
+  all.push(result);
+  console.log(JSON.stringify(result));
+}
+sf.stdin.write('quit\n');sf.kill();
