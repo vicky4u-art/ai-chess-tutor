@@ -14,3 +14,6 @@ Initial implementation.
 - SQLite persistence (`node:sqlite`), idempotent seeding, WAL mode
 - Scripts: `verify-content.mjs` (content validation), `import-puzzles.mjs` (Lichess DB subset importer)
 - Docs: README, ARCHITECTURE, LEARNING_ENGINE, HANDOFF, LICENSES
+
+## Unreleased
+- Added .devcontainer/devcontainer.json: one-click GitHub Codespaces setup (Node 22, auto install+build, auto-start server on port 3101, public port forwarding) so the app can be used from a phone browser with no local machine.
