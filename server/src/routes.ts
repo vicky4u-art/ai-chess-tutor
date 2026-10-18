@@ -520,21 +520,26 @@ function importPgnGame(db: DatabaseSync, pgnRaw: string, source: string) {
         `UPDATE game_moves SET eval_cp=?, cp_loss=?, classification=?, concept_links=? WHERE game_id=? AND ply=?`,
       );
       const txBody = () => {
+        // Never retain a stale classification from an earlier partial analysis.
+        db.prepare(`UPDATE game_moves SET eval_cp=NULL, cp_loss=NULL, classification='unanalyzed', concept_links='[]' WHERE game_id=?`).run(gameId);
         for (const m of moves) {
           const ply = m.ply as number;
           const ev = evals.get(ply);
-          if (!ev) continue;
           const next = evals.get(ply + 1);
-          // evalCp is side-to-move perspective; cpLoss from the mover's view.
-          const afterMover = next ? -next.evalCp : -ev.evalCp;
-          const cpLoss = Math.max(0, Math.round(ev.evalCp - afterMover));
+          // One eval is needed before AND after a move. In particular, the final
+          // move cannot be scored using its own before-position evaluation.
+          if (!ev || !next || !Number.isFinite(ev.evalCp) || !Number.isFinite(next.evalCp)) continue;
+          // Both scores are from side-to-move perspective. The next score is
+          // from the opponent's perspective, so loss = before + after.
+          const cpLoss = Math.max(0, Math.round(ev.evalCp + next.evalCp));
           const classification = classify(cpLoss, ply, ev.bestUci, m.uci as string);
           const conceptLinks = linkConcepts(m.fen_before as string, m.uci as string, classification);
           upd.run(ev.evalCp, cpLoss, classification, jj(conceptLinks), gameId, ply);
         }
       };
       transaction(db, txBody);
-      db.prepare(`UPDATE games SET analyzed=1 WHERE id=?`).run(gameId);
+      const remaining = (db.prepare(`SELECT COUNT(*) AS n FROM game_moves WHERE game_id=? AND classification='unanalyzed'`).get(gameId) as { n: number }).n;
+      db.prepare(`UPDATE games SET analyzed=? WHERE id=?`).run(moves.length > 0 && remaining === 0 ? 1 : 0, gameId);
       const out = (db.prepare(`SELECT * FROM game_moves WHERE game_id=? ORDER BY ply`).all(gameId) as Row[])
         .map((r) => ({
           ply: r.ply, san: r.san, uci: r.uci, fenBefore: r.fen_before,

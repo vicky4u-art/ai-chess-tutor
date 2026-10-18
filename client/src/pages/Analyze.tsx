@@ -140,10 +140,31 @@ export function Analyze() {
       if (a) evals.push({ ply: m.ply, evalCp: a.evalCp, bestUci: a.bestUci, depth: a.depth });
       setAnalyzeProgress(Math.round(((i + 1) / moves.length) * 100));
     }
+    // The last played move needs one extra engine read of the final board.
+    // Terminal positions have known game-theoretic evaluations without search.
+    if (!cancelRef.current && moves.length > 0) {
+      const last = moves[moves.length - 1];
+      try {
+        const end = new Chess(last.fenBefore);
+        end.move({ from: last.uci.slice(0, 2), to: last.uci.slice(2, 4), promotion: last.uci[4] });
+        if (end.isCheckmate()) {
+          evals.push({ ply: last.ply + 1, evalCp: -100000, bestUci: '', depth: 0 });
+        } else if (end.isDraw()) {
+          evals.push({ ply: last.ply + 1, evalCp: 0, bestUci: '', depth: 0 });
+        } else {
+          const finalRead = await engine.analyze(end.fen(), { depth: 14, timeMs: 500 });
+          if (finalRead) {
+            evals.push({ ply: last.ply + 1, evalCp: finalRead.evalCp, bestUci: finalRead.bestUci, depth: finalRead.depth });
+          }
+        }
+      } catch {
+        // An incomplete final read leaves the last move accurately 'unanalyzed'.
+      }
+    }
     if (!cancelRef.current && evals.length > 0) {
       try {
         const res = await api.analyzeGame(detail.game.id, evals);
-        setDetail({ ...detail, moves: res.moves, game: { ...detail.game, analyzed: true } });
+        setDetail({ ...detail, moves: res.moves, game: { ...detail.game, analyzed: res.moves.every((m) => m.classification !== 'unanalyzed') } });
       } catch (e) {
         setEngineError(e instanceof ChessApiError ? e.message : 'Server analysis failed.');
       }

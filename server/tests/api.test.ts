@@ -282,3 +282,22 @@ describe('server-verified exercise outcomes', () => {
     expect(concepts.find((c: { id: string }) => c.id === ex.conceptId).mastery.mastery).toBeLessThan(0.2);
   });
 });
+
+describe('incomplete and terminal game analysis', () => {
+  it('never invents an evaluation of the last move when no after-position read exists', async () => {
+    const imported = await app.inject({ method: 'POST', url: '/api/games/import', payload: { pgn: SCHOLARS_MATE } });
+    const gameId = imported.json().game.id;
+    const moves = imported.json().moves;
+    const evals = moves.map((m: { ply: number }) => ({ ply: m.ply, evalCp: 0, bestUci: '' }));
+    const partial = await app.inject({ method: 'POST', url: `/api/games/${gameId}/analyze`, payload: { evals } });
+    expect(partial.json().moves.at(-1).classification).toBe('unanalyzed');
+    const detail1 = await app.inject({ method: 'GET', url: `/api/games/${gameId}` });
+    expect(detail1.json().game.analyzed).toBe(false);
+    // Last position is checkmate for the side to move, evaluated at -100000 cp.
+    const finished = await app.inject({ method: 'POST', url: `/api/games/${gameId}/analyze`,
+      payload: { evals: [...evals, { ply: moves.at(-1).ply + 1, evalCp: -100000, bestUci: '' }] } });
+    expect(finished.json().moves.at(-1).classification).not.toBe('unanalyzed');
+    const detail2 = await app.inject({ method: 'GET', url: `/api/games/${gameId}` });
+    expect(detail2.json().game.analyzed).toBe(true);
+  });
+});
