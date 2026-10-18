@@ -32,7 +32,16 @@ function sanFor(fen: string, uci: string): string {
 function matchesSolution(ex: Exercise, playedUci: string): boolean {
   const norm = (u: string) => u.toLowerCase();
   if (ex.solutionUci.some((s) => norm(s) === norm(playedUci))) return true;
-  return (ex.acceptableUci ?? []).some((alt) => alt.some((s) => norm(s) === norm(playedUci)));
+  if ((ex.acceptableUci ?? []).some((alt) => alt.some((s) => norm(s) === norm(playedUci)))) return true;
+  if (/(?:mate in (?:one|1)|which move checkmates|immediate checkmate|find a checkmate in one)/i.test(ex.prompt)) {
+    try {
+      const g = new Chess(ex.fen);
+      const { from, to, promotion } = uciParts(playedUci);
+      g.move({ from, to, promotion });
+      return g.isCheckmate();
+    } catch { return false; }
+  }
+  return false;
 }
 
 export function ExerciseRunner({
