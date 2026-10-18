@@ -44,6 +44,10 @@ for(const e of EXERCISES){
   const legal=c.moves({verbose:true});
   let result={id:e.id,concept:e.conceptId,kind:e.kind,prompt:e.prompt,solution:e.solutionUci?.join(' '),fen:e.fen,invalidPre,legal:legal.length,whiteInCheck:color==='w'&&c.isCheck(),turn:color};
   if(e.kind!=='yes-no'){
+    if(invalidPre) {
+      result.error='INVALID POSITION: the player to move already attacks the opponent king';
+      all.push(result); console.log(JSON.stringify(result)); continue;
+    }
     result.current=await analyze(c.fen(),170);
     try{
       const move=e.solutionUci[0];
