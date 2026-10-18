@@ -31,7 +31,6 @@ const BASE_URL: string =
 // forwards /api to the API server; in production the API server serves the
 // client itself, so same-origin is correct in both cases.
 
-const TOKEN: string | undefined = import.meta.env.VITE_APP_TOKEN as string | undefined;
 
 export class ChessApiError extends Error {
   status: number;
@@ -47,7 +46,6 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     'Content-Type': 'application/json',
     ...(init.headers as Record<string, string> | undefined),
   };
-  if (TOKEN) headers['Authorization'] = `Bearer ${TOKEN}`;
   let res: Response;
   try {
     res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
@@ -180,6 +178,9 @@ export interface AnalyzeResponse {
 
 export const api = {
   health: () => get<Health>('/api/health'),
+  authStatus: () => get<{ protected: boolean; authenticated: boolean }>('/api/auth/status'),
+  login: (token: string) => post<{ authenticated: boolean }>('/api/auth/login', { token }),
+  logout: () => post<{ authenticated: boolean }>('/api/auth/logout'),
   diagnostics: () => get<Diagnostics>('/api/diagnostics'),
 
   getProfile: () => get<Profile>('/api/profile'),

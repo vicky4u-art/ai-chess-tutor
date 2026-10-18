@@ -1,5 +1,6 @@
 /** Hash-based router + bottom tab navigation (mobile-first). */
 import { useEffect, useState } from 'react';
+import { api } from './api';
 import { Dashboard } from './pages/Dashboard';
 import { Assessment } from './pages/Assessment';
 import { Learn } from './pages/Learn';
@@ -64,6 +65,30 @@ function tabFor(route: Route): string {
 
 export function App() {
   const [route, setRoute] = useState<Route>(() => parseHash());
+  const [access, setAccess] = useState<'checking' | 'locked' | 'unlocked' | 'error'>('checking');
+  const [token, setToken] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    api.authStatus().then((s) => setAccess(s.authenticated ? 'unlocked' : 'locked'))
+      .catch(() => setAccess('error'));
+  }, []);
+
+  const signIn = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setAuthError('');
+    setSubmitting(true);
+    try {
+      await api.login(token);
+      setToken('');
+      setAccess('unlocked');
+    } catch {
+      setAuthError('Incorrect token or login unavailable.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     const onHash = () => {
@@ -76,6 +101,29 @@ export function App() {
 
   const activeTab = tabFor(route);
 
+  if (access !== 'unlocked') {
+    return (
+      <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-5">
+        <section className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 p-6 space-y-4">
+          <h1 className="text-xl font-semibold text-amber-300">Chess Tutor</h1>
+          {access === 'checking' && <p>Checking access…</p>}
+          {access === 'error' && <p>Could not contact the tutor server. Reload to retry.</p>}
+          {access === 'locked' && (
+            <form onSubmit={signIn} className="space-y-3">
+              <p className="text-sm text-slate-300">Enter your private APP_TOKEN to unlock your tutor.</p>
+              <input type="password" autoComplete="current-password" aria-label="Access token"
+                value={token} onChange={(e) => setToken(e.target.value)}
+                className="w-full rounded-lg bg-slate-950 border border-slate-600 p-3" />
+              {authError && <p role="alert" className="text-sm text-red-300">{authError}</p>}
+              <button disabled={submitting || !token} className="w-full rounded-lg bg-amber-400 text-slate-950 p-3 font-medium disabled:opacity-50">
+                {submitting ? 'Checking…' : 'Unlock tutor'}
+              </button>
+            </form>
+          )}
+        </section>
+      </main>
+    );
+  }
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <header className="sticky top-0 z-20 bg-slate-950/95 backdrop-blur border-b border-slate-800">
