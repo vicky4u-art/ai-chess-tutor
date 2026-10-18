@@ -79,6 +79,7 @@ export async function chatCompletion(cfg: AiConfig, system: string, messages: Ch
 
 /** System prompt for the Socratic chess tutor. */
 export function tutorSystemPrompt(args: {
+  fen: string;
   weakConcepts: string[];
   recentMistakes: string[];
   engine?: { bestUci: string; evalCp: number; depth: number } | null;
@@ -90,6 +91,8 @@ export function tutorSystemPrompt(args: {
     'Adapt your depth: keep explanations concrete and jargon-light for beginners, precise for stronger players.',
     'When you mention a move, write it in coordinate (UCI) form like e2e4 as well as SAN.',
     'Never invent engine evaluations or variations — if you are unsure, say so.',
+    `Current chess position (FEN): ${args.fen}. The active player is ${args.fen.split(' ')[1] === 'b' ? 'Black' : 'White'}.`,
+    'All suggested moves must be legal from this specific FEN; use the verified engine read when available.',
   ];
   if (args.engine) {
     lines.push(

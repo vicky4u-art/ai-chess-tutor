@@ -121,7 +121,7 @@ export function Session({ sessionId }: { sessionId: string }) {
     setStepLoading(true);
     setStepData(null);
     const p: Promise<unknown> =
-      current.kind === 'exercise'
+      (current.kind === 'exercise' || current.kind === 'review')
         ? api.getExercise(current.refId).then((exercise) => ({ exercise }))
         : current.kind === 'puzzle'
           ? api.getPuzzle(current.refId).then((puzzle) => ({ puzzle }))
@@ -221,7 +221,7 @@ export function Session({ sessionId }: { sessionId: string }) {
 
       {!paused && stepLoading && <Loading label="Loading step" />}
 
-      {!paused && !stepLoading && current?.kind === 'exercise' && stepData?.exercise && (
+      {!paused && !stepLoading && (current?.kind === 'exercise' || current?.kind === 'review') && stepData?.exercise && (
         <ExerciseRunner key={stepData.exercise.id} exercise={stepData.exercise} onDone={handleExerciseDone(stepData.exercise)} />
       )}
 
@@ -229,7 +229,7 @@ export function Session({ sessionId }: { sessionId: string }) {
         <PuzzleStep puzzle={stepData.puzzle} onDone={handlePuzzleDone(stepData.puzzle)} />
       )}
 
-      {!paused && !stepLoading && (current?.kind === 'lesson' || current?.kind === 'review') && stepData?.lesson && (
+      {!paused && !stepLoading && current?.kind === 'lesson' && stepData?.lesson && (
         <Card>
           <p className="text-xs text-amber-300/80 uppercase tracking-wide mb-1">Lesson</p>
           <h3 className="text-lg font-semibold text-slate-100 mb-1">{stepData.lesson.title}</h3>

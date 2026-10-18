@@ -146,9 +146,9 @@ function deriveOutcome(body: {
   playedUci?: string;
   hintsUsed?: number;
 }): AttemptOutcome {
-  if (body.outcome && ['independent', 'hinted', 'shown'].includes(body.outcome)) return body.outcome;
-  if (body.correct) return (body.hintsUsed ?? 0) > 0 ? 'hinted' : 'independent';
-  return 'shown';
+  // A client's claimed outcome never overrides the server's move check.
+  if (body.outcome === 'shown' || !body.correct) return 'shown';
+  return (body.hintsUsed ?? 0) > 0 ? 'hinted' : 'independent';
 }
 
 function checkCorrect(ex: { solutionUci: string[]; acceptableUci?: string[][] }, playedUci?: string): boolean {
@@ -230,7 +230,7 @@ export function registerRoutes(app: FastifyInstance, db: DatabaseSync): void {
     async (req) => {
       const ex = getExercise(db, req.params.id);
       const b = req.body ?? {};
-      const correct = b.correct ?? checkCorrect(ex, b.playedUci);
+      const correct = b.outcome !== 'shown' && checkCorrect(ex, b.playedUci);
       const outcome = deriveOutcome({ ...b, correct });
       db.prepare(
         `INSERT INTO exercise_attempts (id, exercise_id, session_id, outcome, hints_used, time_ms, created_at)
@@ -273,7 +273,7 @@ export function registerRoutes(app: FastifyInstance, db: DatabaseSync): void {
     async (req) => {
       const b = req.body;
       const ex = getExercise(db, b.exerciseId);
-      const correct = b.correct ?? checkCorrect(ex, b.playedUci);
+      const correct = b.outcome !== 'shown' && checkCorrect(ex, b.playedUci);
       const outcome = deriveOutcome({ ...b, correct });
       db.prepare(
         `INSERT INTO assessment_answers (assessment_id, exercise_id, outcome, hints_used, time_ms)
@@ -550,6 +550,7 @@ function importPgnGame(db: DatabaseSync, pgnRaw: string, source: string) {
     async (req) => {
       const body = req.body ?? {};
       const fen = body.fen ?? new Chess().fen();
+      try { new Chess(fen); } catch { throw Object.assign(new Error('Invalid position FEN'), { statusCode: 400 }); }
       const history: ChatMsg[] = (body.messages ?? []).slice(-8);
       const mastery = getMastery(db);
       const weak = [...mastery].sort((a, b) => a.mastery - b.mastery).slice(0, 3).map((m) => m.conceptId);
@@ -574,7 +575,7 @@ function importPgnGame(db: DatabaseSync, pgnRaw: string, source: string) {
       let aiConfigured = false;
       if (cfg) {
         try {
-          const system = tutorSystemPrompt({ weakConcepts: weak, recentMistakes: mistakeSummary, engine: body.engine ?? null });
+          const system = tutorSystemPrompt({ fen, weakConcepts: weak, recentMistakes: mistakeSummary, engine: body.engine ?? null });
           reply = await chatCompletion(cfg, system, history);
           aiConfigured = true;
         } catch (e) {

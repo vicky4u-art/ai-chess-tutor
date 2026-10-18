@@ -13,7 +13,7 @@
     "3101": {
       "label": "Chess Tutor app",
       "onAutoForward": "notify",
-      "visibility": "public"
+      "visibility": "private"
     }
   }
 }
