@@ -82,6 +82,10 @@ try {
       await show.click();
     }
     await page.getByText(/Step 2 of [0-9]+/).waitFor({ timeout: 15000 });
+    await page.getByRole('button', { name: 'Pause' }).click();
+    await page.getByText('Paused. Your progress is saved', { exact: false }).waitFor();
+    await page.getByRole('button', { name: 'Resume' }).click();
+    await page.getByText(/Step 2 of [0-9]+/).waitFor();
   });
 
   await test('Puzzle practice and next puzzle', async () => {
