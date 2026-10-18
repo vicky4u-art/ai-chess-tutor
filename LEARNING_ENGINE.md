@@ -92,3 +92,16 @@ Uncertainty policy: dashboard counts only links with confidence ≥ 0.5 toward `
 ## How to modify the logic
 
 Edit `server/src/learning.ts` (mastery, bands, planner) or `routes.ts` `classify`/`linkConcepts` (analysis). Add/adjust unit tests in `server/tests/learning.test.ts`. Keep functions pure and deterministic; update this doc when constants change.
+
+## Puzzle-to-concept adaptation
+
+Puzzles now update mastery using the same deterministic rule as exercises.
+Correct unhinted solutions count as independent; hinted solutions count as
+hinted; failures count as shown. The server verifies submitted moves rather
+than trusting client-supplied success flags.
+
+The theme mapping is intentionally conservative: checkmate patterns teach
+`rules-checkmates`, `hangingPiece` teaches `hanging-pieces`, and other
+tactics map to `tactics`. Daily sessions only assign puzzles whose mapped
+concept matches the selected learning skill. Additional mappings should be
+introduced only when there is reliable theme coverage.

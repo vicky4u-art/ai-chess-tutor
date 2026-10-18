@@ -301,3 +301,23 @@ describe('incomplete and terminal game analysis', () => {
     expect(detail2.json().game.analyzed).toBe(true);
   });
 });
+
+describe('puzzle-driven mastery', () => {
+  it('updates the matching skill and never rewards an incorrect answer', async () => {
+    const p = (await app.inject({ method: 'GET', url: '/api/puzzles/seed-001' })).json();
+    const before = (await app.inject({ method: 'GET', url: '/api/concepts' })).json()
+      .find((x: { id: string }) => x.id === 'rules-checkmates').mastery.mastery;
+    const good = await app.inject({ method: 'POST', url: '/api/puzzles/seed-001/attempt',
+      payload: { solved: true, movesPlayed: p.solutionUci, hintsUsed: 0 } });
+    expect(good.json().correct).toBe(true);
+    const after = (await app.inject({ method: 'GET', url: '/api/concepts' })).json()
+      .find((x: { id: string }) => x.id === 'rules-checkmates').mastery.mastery;
+    expect(after).toBeGreaterThan(before);
+    const wrong = await app.inject({ method: 'POST', url: '/api/puzzles/seed-001/attempt',
+      payload: { solved: true, movesPlayed: ['a1a1'], hintsUsed: 0 } });
+    expect(wrong.json().correct).toBe(false);
+    const reduced = (await app.inject({ method: 'GET', url: '/api/concepts' })).json()
+      .find((x: { id: string }) => x.id === 'rules-checkmates').mastery.mastery;
+    expect(reduced).toBeLessThan(after);
+  });
+});

@@ -162,7 +162,8 @@ export function Session({ sessionId }: { sessionId: string }) {
     try {
       await api.attemptExercise(ex.id, { outcome: r.outcome, timeMs: r.timeMs, hintsUsed: r.hintsUsed, playedUci: r.playedUci });
     } catch (e) {
-      console.warn('[session] attempt post failed:', e);
+      setError(e instanceof ChessApiError ? e.message : 'Could not save exercise result. Reload and retry this step.');
+      return;
     }
     if (currentIndex >= 0) await completeStep(currentIndex);
   };
@@ -171,7 +172,8 @@ export function Session({ sessionId }: { sessionId: string }) {
     try {
       await api.attemptPuzzle(pz.id, { solved, outcome, timeMs, hintsUsed, movesPlayed: moves });
     } catch (e) {
-      console.warn('[session] puzzle attempt post failed:', e);
+      setError(e instanceof ChessApiError ? e.message : 'Could not save puzzle result. Reload and retry this step.');
+      return;
     }
     if (currentIndex >= 0) await completeStep(currentIndex);
   };

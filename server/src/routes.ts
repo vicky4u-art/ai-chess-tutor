@@ -19,7 +19,7 @@ import {
   TutorChatResponse,
   emptyMastery,
 } from '@chesstutor/shared';
-import { updateMastery, assessmentSeed, planSession, pickNextPuzzle, difficultyBand } from './learning.js';
+import { updateMastery, assessmentSeed, planSession, pickNextPuzzle, difficultyBand, puzzleConcept } from './learning.js';
 import { parsePgn, extractUciMoves, validatedMoves, isLegalSequence } from './chess.js';
 import { loadAiConfig, chatCompletion, tutorSystemPrompt, ChatMsg } from './ai.js';
 import { fetchChesscomGames, extractGameLink, normalizeUsername } from './chesscom.js';
@@ -338,8 +338,8 @@ export function registerRoutes(app: FastifyInstance, db: DatabaseSync): void {
     const exercises = (db.prepare(`SELECT id, concept_id, difficulty FROM exercises`).all() as Row[]).map((r) => ({
       id: r.id as string, conceptId: r.concept_id as ConceptId, difficulty: r.difficulty as number,
     }));
-    const puzzles = (db.prepare(`SELECT id, rating FROM puzzles`).all() as Row[]).map((r) => ({
-      id: r.id as string, rating: r.rating as number,
+    const puzzles = (db.prepare(`SELECT id, rating, themes FROM puzzles`).all() as Row[]).map((r) => ({
+      id: r.id as string, rating: r.rating as number, themes: j<string[]>(r.themes),
     }));
     const plan = planSession(mastery, minutes, lessons, exercises, puzzles);
     const id = randomUUID();
@@ -380,8 +380,8 @@ export function registerRoutes(app: FastifyInstance, db: DatabaseSync): void {
   // ---- puzzles ----
   app.get<{ Querystring: { conceptId?: string } }>('/api/puzzles/next', async (req) => {
     const mastery = getMastery(db);
-    const puzzles = (db.prepare(`SELECT id, rating FROM puzzles`).all() as Row[]).map((r) => ({
-      id: r.id as string, rating: r.rating as number,
+    const puzzles = (db.prepare(`SELECT id, rating, themes FROM puzzles`).all() as Row[]).map((r) => ({
+      id: r.id as string, rating: r.rating as number, themes: j<string[]>(r.themes),
     }));
     const attempted = new Set(
       (db.prepare(`SELECT puzzle_id FROM puzzle_attempts ORDER BY created_at DESC LIMIT 300`).all() as Row[])
@@ -404,8 +404,19 @@ export function registerRoutes(app: FastifyInstance, db: DatabaseSync): void {
       const matchesLearner = moves.length === learnerMoves.length && moves.every((m, i) => m === learnerMoves[i]);
       const legal = moves.length > 0 && isLegalSequence(p.fen, moves);
       const correct = legal && (matchesFull || matchesLearner);
-      db.prepare(`INSERT INTO puzzle_attempts (id, puzzle_id, solved, hints_used, time_ms, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
-        .run(randomUUID(), p.id, correct ? 1 : 0, req.body.hintsUsed ?? 0, req.body.timeMs ?? 0, nowIso());
+      // A puzzle updates only the concept its themes actually cover. Never
+      // award mastery from the client's claimed "solved" or "outcome" fields.
+      const conceptId = puzzleConcept(p.themes);
+      const outcome: AttemptOutcome = !correct ? 'shown' : (req.body.hintsUsed ?? 0) > 0 ? 'hinted' : 'independent';
+      transaction(db, () => {
+        db.prepare(`INSERT INTO puzzle_attempts (id, puzzle_id, solved, hints_used, time_ms, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
+          .run(randomUUID(), p.id, correct ? 1 : 0, req.body.hintsUsed ?? 0, req.body.timeMs ?? 0, nowIso());
+        const prev = getMastery(db).find((m) => m.conceptId === conceptId) ?? emptyMastery(conceptId);
+        const streakRow = db.prepare(`SELECT streak FROM mastery WHERE concept_id=?`).get(conceptId) as Row | undefined;
+        const { record, streak } = updateMastery(prev, (streakRow?.streak as number) ?? 0, outcome);
+        saveMastery(db, record, streak);
+      });
+      snapshotToday(db);
       return { correct, solutionUci: p.solutionUci };
     },
   );
