@@ -99,7 +99,7 @@ export function Course({conceptId,onOpen}:{
             className={'w-full text-left rounded-xl border p-4 flex items-center gap-3 min-h-[76px] '+(locked?'opacity-50 border-slate-800 bg-slate-900':'border-slate-700 bg-slate-900 hover:border-amber-400')}>
             <span className={'rounded-full w-9 h-9 shrink-0 flex items-center justify-center font-semibold '+(l.status==='completed'?'bg-emerald-950 text-emerald-300':locked?'bg-slate-800 text-slate-500':'bg-amber-400 text-slate-950')}>{l.status==='completed'?'✓':i+1}</span>
             <span className="flex-1"><span className="block text-slate-100 font-medium">{l.title}</span>
-              <span className="text-xs text-slate-400">{l.status==='completed'?'Mastered — review any time':locked?'Complete prerequisite lessons':l.status==='active'?'Practice in progress':l.bestScore>0?'Review and retry':'Ready to learn'}</span>
+              <span className="text-xs text-slate-400">{l.status==='completed'?(l.reviewSuggested?'Review recommended — strengthen this skill':'Mastered — review any time'):locked?'Complete prerequisite lessons':l.status==='active'?'Practice in progress':l.bestScore>0?'Review and retry':'Ready to learn'}</span>
             </span>
             {!locked&&<span className="text-amber-300 text-xs">{l.conceptId===overview.recommendedConceptId?'Next →':'Open →'}</span>}
           </button>
@@ -166,7 +166,12 @@ export function Course({conceptId,onOpen}:{
       <p className="text-2xl text-amber-300 font-semibold mb-2">{round.correctCount}/{round.total} correct</p>
       <p className="text-sm text-slate-400 mb-4">{round.independentCount} solved without hints · Need at least 3 correct and 2 independent to pass.</p>
       {round.passed?<>
-        <Btn className="w-full" onClick={()=>onOpen(overview.recommendedConceptId&&overview.recommendedConceptId!==conceptId?overview.recommendedConceptId:undefined)}>Continue learning →</Btn>
+        {item.reviewSuggested&&<p className="text-sm text-amber-300 mb-3">Your performance passed this lesson, but it needs reinforcement. Review and attempt again for better retention.</p>}
+        <Btn className="w-full" onClick={()=>{
+          if(overview.recommendedConceptId===conceptId){setStage('read');setDemoShown(false);setLessonIndex(0);}
+          else onOpen(overview.recommendedConceptId??undefined);
+        }}>{overview.recommendedConceptId===conceptId?'Review this skill →':'Continue learning →'}</Btn>
+        <Btn variant="ghost" className="w-full mt-2" onClick={()=>{setStage('read');setDemoShown(false);setLessonIndex(0);}}>Review lesson again</Btn>
         <Btn className="w-full mt-2" variant="ghost" onClick={()=>onOpen()}>All lessons</Btn>
       </>:<>
         <Btn className="w-full" onClick={()=>{setStage('demo');setDemoShown(false);setViewedAnswer(false);setLessonIndex(0);}}>Review tutorial and retry</Btn>
