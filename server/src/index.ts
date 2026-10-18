@@ -8,6 +8,7 @@ import { getDb } from './db/index.js';
 import { registerAuth } from './auth.js';
 import { seed } from './db/seed.js';
 import { registerRoutes } from './routes.js';
+import { registerJourneyRoutes } from './journey.js';
 import { API_VERSION } from '@chesstutor/shared';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -49,6 +50,7 @@ async function main(): Promise<void> {
   });
 
   registerRoutes(app, db);
+  registerJourneyRoutes(app, db);
 
   // Static client (production). In dev, Vite serves the client and proxies /api here.
   const distDir = join(here, '..', '..', 'client', 'dist');
