@@ -151,10 +151,25 @@ function deriveOutcome(body: {
   return (body.hintsUsed ?? 0) > 0 ? 'hinted' : 'independent';
 }
 
-function checkCorrect(ex: { solutionUci: string[]; acceptableUci?: string[][] }, playedUci?: string): boolean {
+function checkCorrect(
+  ex: { solutionUci: string[]; acceptableUci?: string[][]; fen?: string; prompt?: string },
+  playedUci?: string,
+): boolean {
   if (!playedUci) return false;
-  if (ex.solutionUci[0] === playedUci) return true;
-  return (ex.acceptableUci ?? []).some((alt) => alt[0] === playedUci);
+  const move = playedUci.toLowerCase();
+  if (ex.solutionUci[0]?.toLowerCase() === move) return true;
+  if ((ex.acceptableUci ?? []).some((alt) => alt[0]?.toLowerCase() === move)) return true;
+
+  // In genuine "mate in one" lesson exercises, any legal immediate mate is
+  // correct, even when the author listed only one example move.
+  if (ex.fen && ex.prompt && /(?:mate in (?:one|1)|which move checkmates|immediate checkmate|find a checkmate in one)/i.test(ex.prompt)) {
+    try {
+      const g = new Chess(ex.fen);
+      g.move({ from: move.slice(0, 2), to: move.slice(2, 4), promotion: move[4] });
+      return g.isCheckmate();
+    } catch { return false; }
+  }
+  return false;
 }
 
 // ---------------------------------------------------------------- routes
@@ -403,7 +418,18 @@ export function registerRoutes(app: FastifyInstance, db: DatabaseSync): void {
       const matchesFull = moves.length === p.solutionUci.length && moves.every((m, i) => m === p.solutionUci[i]);
       const matchesLearner = moves.length === learnerMoves.length && moves.every((m, i) => m === learnerMoves[i]);
       const legal = moves.length > 0 && isLegalSequence(p.fen, moves);
-      const correct = legal && (matchesFull || matchesLearner);
+      // Mate-in-one puzzles can have multiple equally valid mating moves.
+      // Verify the final board instead of comparing only one authored line.
+      let alternativeMate = false;
+      if (p.themes.includes('mateIn1') && moves.length === 1 && legal) {
+        const board = new Chess(p.fen);
+        const u = moves[0];
+        try {
+          board.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] });
+          alternativeMate = board.isCheckmate();
+        } catch { alternativeMate = false; }
+      }
+      const correct = legal && (matchesFull || matchesLearner || alternativeMate);
       // A puzzle updates only the concept its themes actually cover. Never
       // award mastery from the client's claimed "solved" or "outcome" fields.
       const conceptId = puzzleConcept(p.themes);
