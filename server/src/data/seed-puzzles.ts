@@ -59,7 +59,7 @@ export const SEED_PUZZLES: Puzzle[] = [
   { id: "seed-035", sourceId: "seed", fen: "6k1/5ppp/8/8/3q4/8/5PPP/3R2K1 w - - 0 1", solutionUci: ["d1d4"], rating: 900, themes: ["hangingPiece"] },
   { id: "seed-036", sourceId: "seed", fen: "6k1/n4ppp/8/8/8/8/5PPP/R5K1 w - - 0 1", solutionUci: ["a1a7"], rating: 810, themes: ["hangingPiece"] },
   { id: "seed-037", sourceId: "seed", fen: "6k1/5ppp/8/8/n7/8/5PPP/R5K1 w - - 0 1", solutionUci: ["a1a4"], rating: 830, themes: ["hangingPiece"] },
-  { id: "seed-038", sourceId: "seed", fen: "6k1/5P2/5K2/8/8/8/1r6/6R1 w - - 0 1", solutionUci: ["g1g4"], rating: 1500, themes: ["endgame", "rookEndgame"] },
+  { id: "seed-038", sourceId: "seed", fen: "6kr/6pp/8/P7/8/8/5PPP/1R4K1 w - - 0 1", solutionUci: ["b1b8"], rating: 1500, themes: ["endgame", "rookEndgame"] },
   { id: "seed-039", sourceId: "seed", fen: "6k1/5ppp/8/8/3n4/8/1B2PPPP/6K1 w - - 0 1", solutionUci: ["b2d4"], rating: 860, themes: ["hangingPiece"] },
   { id: "seed-040", sourceId: "seed", fen: "6k1/5ppp/8/8/8/2b5/5PPP/2R3K1 w - - 0 1", solutionUci: ["c1c3"], rating: 880, themes: ["hangingPiece"] },
   { id: "seed-041", sourceId: "seed", fen: "4k3/8/8/8/4N3/8/5PPP/4R1K1 w - - 0 1", solutionUci: ["e4f6"], rating: 1350, themes: ["discoveredAttack", "doubleCheck"] },
