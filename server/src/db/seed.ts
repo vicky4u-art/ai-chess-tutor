@@ -3,13 +3,18 @@ import type { DatabaseSync } from 'node:sqlite';
 import { CONCEPTS } from '@chesstutor/shared';
 import { LESSONS, EXERCISES } from '../data/curriculum.js';
 import { SEED_PUZZLES } from '../data/seed-puzzles.js';
-import { tableEmpty, transaction } from './index.js';
+import { transaction } from './index.js';
 
 export function seed(db: DatabaseSync): void {
-  if (tableEmpty(db, 'lessons')) {
+  // Refresh authored material on every start; keep attempts and mastery untouched.
+  {
     const ins = db.prepare(
       `INSERT INTO lessons (id, concept_id, level, title, objective, content_md, exercise_ids)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         concept_id=excluded.concept_id, level=excluded.level,
+         title=excluded.title, objective=excluded.objective,
+         content_md=excluded.content_md, exercise_ids=excluded.exercise_ids`,
     );
     transaction(db, () => {
       for (const l of LESSONS) {
@@ -18,10 +23,16 @@ export function seed(db: DatabaseSync): void {
     });
   }
 
-  if (tableEmpty(db, 'exercises')) {
+  {
     const ins = db.prepare(
       `INSERT INTO exercises (id, concept_id, kind, fen, prompt, solution_uci, acceptable_uci, choices, hints, explanation, difficulty)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         concept_id=excluded.concept_id, kind=excluded.kind, fen=excluded.fen,
+         prompt=excluded.prompt, solution_uci=excluded.solution_uci,
+         acceptable_uci=excluded.acceptable_uci, choices=excluded.choices,
+         hints=excluded.hints, explanation=excluded.explanation,
+         difficulty=excluded.difficulty`,
     );
     transaction(db, () => {
       for (const e of EXERCISES) {
@@ -34,10 +45,14 @@ export function seed(db: DatabaseSync): void {
     });
   }
 
-  if (tableEmpty(db, 'puzzles')) {
+  {
     const ins = db.prepare(
       `INSERT INTO puzzles (id, source_id, fen, solution_uci, rating, themes)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         source_id=excluded.source_id, fen=excluded.fen,
+         solution_uci=excluded.solution_uci,
+         rating=excluded.rating, themes=excluded.themes`,
     );
     transaction(db, () => {
       for (const p of SEED_PUZZLES) {
