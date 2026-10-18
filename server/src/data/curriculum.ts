@@ -110,7 +110,7 @@ export const LESSONS: Lesson[] = [
     objective: "Recognize and execute forks, pins, skewers, and discovered attacks.",
     exerciseIds: ["ex-tac-1", "ex-tac-2", "ex-tac-3", "ex-tac-4"],
     contentMd: [
-      "Tactics are forcing sequences that win material or deliver mate. Four patterns cover the vast majority of what you will see. A fork is one piece attacking two or more enemy pieces at once; knights are the classic forking piece because their jump is hard to predict (Nf7+ forking king and rook is the model). A pin freezes a piece in place because moving it would expose something more valuable behind it (Bb5 pinning a knight to the king).",
+      "Tactics are forcing sequences that win material or deliver mate. Four patterns cover the vast majority of what you will see. A fork is one piece attacking two or more enemy pieces at once; knights are the classic forking piece because their jump is hard to predict (Nf7+ forking king and rook is the model). A pin holds a piece along a line because moving it would expose something more valuable behind it (for example, Bg5 pinning a knight on f6 to the queen on d8, when the e7-square is clear). A bishop on b5 attacking a knight on c6 in the Ruy Lopez does not create an absolute pin while Black's d7-pawn still blocks the diagonal to the king.",
       "",
       "A skewer is a pin in reverse: you attack the more valuable piece first, and when it moves, you win the piece behind it. A discovered attack moves one piece out of the way so another piece's line opens with tempo, often with check. The most violent version is the double check, where two pieces give check at once and the king must move.",
       "",
@@ -622,16 +622,16 @@ export const EXERCISES: Exercise[] = [
     conceptId: "tactics",
     kind: "find-move",
     fen: "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
-    prompt: "White to move. Pin the black knight.",
+    prompt: "White to move. Play the Ruy Lopez bishop move that pressures the knight defending e5.",
     solutionUci: ["f1b5"],
     acceptableUci: [["d2d4"]],
     hints: [
-      "A pin freezes a piece against something more valuable behind it. What stands behind the c6 knight?",
-      "The black king on e8. A bishop on b5 would line up b5-c6-d7-e8.",
-      "Play 1. Bb5. The knight cannot move without exposing the king.",
+      "Black's knight on c6 helps defend the pawn on e5.",
+      "Move the f1 bishop to b5 to increase pressure on that knight.",
+      "Play Bb5. The bishop attacks the c6-knight, but the d7-pawn means it is not yet an absolute pin against the king.",
     ],
     explanation:
-      "1. Bb5 pins the c6 knight to the black king along the b5-e8 diagonal. Pinned pieces are tactically dead: they cannot move, and pressure against them usually wins material. d4 is also fine, but the pin is the thematic shot.",
+      "3. Bb5 is the Ruy Lopez: White's bishop attacks the c6-knight that helps defend Black's e5-pawn. This is not an absolute pin to the black king while Black's pawn still occupies d7 between the knight and king. A pinned piece cannot legally expose its king, but the knight on c6 can currently move because the d7-pawn blocks the diagonal.",
     difficulty: 25,
   },
   {
@@ -791,17 +791,17 @@ export const EXERCISES: Exercise[] = [
     conceptId: "openings",
     kind: "choose-move",
     fen: "rnbqkbnr/pppp1ppp/8/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR b KQkq - 1 2",
-    prompt: "Black to move (1. e4 e5 2. Qh5?!). Punish the early queen the principled way.",
+    prompt: "Black to move after 1. e4 e5 2. Qh5. Develop while defending the e5-pawn.",
     solutionUci: ["b8c6"],
     acceptableUci: [["d8e7"]],
     choices: ["b8c6", "g8f6", "d8e7", "h7h6"],
     hints: [
-      "The queen on h5 is misplaced but not immediately lost. What is the calm, developing reply?",
-      "Develop with tempo: Nc6 attacks nothing yet but brings a piece out and prepares ...Nf6.",
-      "Play 2...Nc6. (2...Qe7 is solid too.) Do not play 2...Nf6?? walking into tactics, and do not waste time on 2...h6.",
+      "The early queen on h5 attacks the e5-pawn, which must not be forgotten.",
+      "...Nc6 develops a knight to defend e5 without weakening Black's position.",
+      "Play ...Nc6. This develops and protects e5; it does NOT directly attack the queen on h5.",
     ],
     explanation:
-      "2...Nc6 is the principled punishment: develop while the queen sits awkwardly, and it will have to move again. 2...Nf6?? blunders to tactics around e5, and 2...h6 is a wasted tempo. Against early queen sorties, develop; the queen refutes itself.",
+      "2...Nc6 is a standard answer to 2. Qh5 because the knight develops and defends e5. The move does not attack the queen on h5; the knight on c6 attacks squares including e5 and d4, not h5. Black should prepare development while respecting concrete threats, particularly an eventual Qxf7+ if White also develops Bc4.",
     difficulty: 30,
   },
   {
@@ -947,12 +947,12 @@ export const EXERCISES: Exercise[] = [
     prompt: "Black's d-pawn has no neighboring pawns: it is isolated. Does that usually make it a long-term weakness?",
     solutionUci: ["yes"],
     hints: [
-      "An isolated pawn cannot be defended by another pawn. Who must defend it?",
-      "Pieces, which then become tied to passive defense.",
-      "Yes. Isolated pawns are long-term targets: blockade them with a knight and pile on pressure.",
+      "An isolated pawn has no friendly pawns on adjacent files that can defend it.",
+      "White's pawn already blocks Black's d4-pawn on d3. Look for ways to attack the isolated pawn.",
+      "Yes. The isolated d4-pawn may become a long-term target because pieces rather than pawns must defend it.",
     ],
     explanation:
-      "Yes. The isolated d-pawn must be defended by pieces, which become passive, and it can never safely advance. The standard plan against it is a knight blockade on d4 plus steady pressure. Structure dictates strategy.",
+      "Yes, an isolated pawn can become a long-term weakness because friendly pawns cannot support it. In this position Black's pawn is on d4 and is already blocked by White's pawn on d3. A blockading piece would normally occupy d3 if the square were available—not d4, which the black pawn currently occupies. Isolated pawns can also provide space and activity, so their evaluation depends on the position.",
     difficulty: 32,
   },
 
@@ -1217,12 +1217,12 @@ export const EXERCISES: Exercise[] = [
     prompt: "Black's rook controls the open b-file. Is Black's rook well placed?",
     solutionUci: ["yes"],
     hints: [
-      "Rooks belong on open files. Is the b-file open, and does the rook do anything there?",
-      "Yes: it pressures b2 and keeps White tied down.",
-      "Yes. An active rook on an open file is exactly where it should be.",
+      "The b-file has no pawns blocking the rook's movement.",
+      "From b8 the black rook can enter b1 with check if the file remains open.",
+      "Yes. It controls the b-file and has infiltration opportunities, even though there is no white pawn on b2 to attack.",
     ],
     explanation:
-      "Yes. The rook on the open b-file is ideally placed: it attacks along the file and restricts White. In rook endings, rook activity is usually worth more than a pawn; never trade your active rook for a passive one without reason.",
+      "Yes, a rook on an open file can be active, and from b8 this rook has the potential to invade b1 with check against the white king on g1. There is no white pawn on b2 in the diagram, so claiming that the rook attacks a b2-pawn would be incorrect. An open file is valuable because it gives a rook access to the opponent's position.",
     difficulty: 46,
   },
 
