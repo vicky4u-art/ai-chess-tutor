@@ -35,7 +35,7 @@ async function nav(route) { await page.goto(URL + '/#/' + route, { waitUntil: 'd
 async function login() {
   await page.getByLabel('Access token').fill(TOKEN);
   await page.getByRole('button', { name: 'Unlock tutor' }).click();
-  await page.getByText('Daily lesson', { exact: true }).waitFor({ timeout: 15000 });
+  await page.getByText('Road to 1,200', { exact: true }).first().waitFor({ timeout: 15000 });
 }
 try {
   context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
@@ -50,7 +50,31 @@ try {
     await noOverflow('dashboard');
     await shot('mobile-dashboard');
     await page.reload();
-    await page.getByText('Daily lesson', { exact: true }).waitFor();
+    await page.getByText('Road to 1,200', { exact: true }).first().waitFor();
+  });
+
+  await test('Goal-driven lessons, interactive tutorial and practice feedback', async () => {
+    await nav('course');
+    await page.getByText('Road to 1,200', { exact: true }).waitFor();
+    await page.getByRole('button', { name: /Continue recommended lesson/ }).click();
+    await page.getByRole('button', { name: 'Next: Guided tutorial →' }).click();
+    await page.getByRole('button', { name: 'Show the move and explanation' }).click();
+    await page.getByRole('button', { name: 'Start four-position practice →' }).click();
+    await page.getByText(/Practice 1 of 4/).waitFor();
+    await page.getByRole('button', { name: 'Show solution' }).click();
+    await page.getByRole('button', { name: 'Next position →' }).click();
+    await page.getByText(/Practice 2 of 4/).waitFor();
+    await noOverflow('new guided lesson');
+    await shot('mobile-adaptive-course');
+  });
+
+  await test('Three-minute game screen loads and bot starts', async () => {
+    await nav('rating');
+    await page.getByRole('button', { name: 'Start 3:00 game' }).click();
+    await page.getByText('Your move', { exact: true }).waitFor({ timeout: 25000 });
+    await page.getByText('3:00', { exact: true }).first().waitFor();
+    await noOverflow('three-minute game');
+    await shot('mobile-rating-match');
   });
 
   await test('Full 15-position assessment and mastery profile', async () => {

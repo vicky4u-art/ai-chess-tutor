@@ -253,6 +253,61 @@ export interface DashboardData {
   nextPriorities: { conceptId: ConceptId; reason: string }[];
 }
 
+
+export interface JourneyLessonProgress {
+  conceptId: ConceptId;
+  title: string;
+  lessonId: string;
+  status: 'locked' | 'ready' | 'active' | 'completed';
+  mastery: number;
+  prerequisites: ConceptId[];
+  bestScore: number;
+  roundId?: string;
+  reviewSuggested: boolean;
+}
+export interface JourneyOverview {
+  goal: 1200;
+  lessons: JourneyLessonProgress[];
+  recommendedConceptId: ConceptId | null;
+  completedCount: number;
+  totalCount: number;
+}
+export interface JourneyAnswer {
+  exerciseId: string;
+  correct: boolean;
+  outcome: AttemptOutcome;
+}
+export interface JourneyRound {
+  id: string;
+  conceptId: ConceptId;
+  status: 'active' | 'passed' | 'retry';
+  answers: JourneyAnswer[];
+  correctCount: number;
+  independentCount: number;
+  total: number;
+  passed: boolean;
+  feedback: string;
+}
+export interface RatingGame {
+  id: string;
+  botLevel: number;
+  botLabel: string;
+  result: 'win' | 'loss' | 'draw';
+  termination: 'checkmate' | 'draw' | 'timeout' | 'resign';
+  estimate: number;
+  playedAt: string;
+}
+export interface RatingSummary {
+  target: 1200;
+  estimate: number | null;
+  confidence: 'unassessed' | 'very-low' | 'low' | 'developing';
+  margin: number | null;
+  gamesPlayed: number;
+  recommendedBotLevel: number;
+  recentGames: RatingGame[];
+  note: string;
+}
+
 // ---------------------------------------------------------------------------
 // HTTP API (server implements, client consumes)
 // ---------------------------------------------------------------------------

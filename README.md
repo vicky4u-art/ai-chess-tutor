@@ -88,3 +88,25 @@ environment. Enter it in the app's access screen. It is exchanged for a
 one-day HttpOnly SameSite=Strict cookie and never embedded in the frontend.
 Changing APP_TOKEN invalidates sessions. The original bearer header still
 works for scripted API clients.
+
+## Guided course to a 1,200 rating goal
+
+Use **Lessons** (or Home → Start structured learning) to enter an ordered,
+prerequisite-gated training course. Each lesson includes readable instruction,
+a move-by-move guided board demonstration, and four practice questions.
+At least 3 correct answers, including 2 without hints, are required to advance.
+Answers are checked server-side, practice is resumable, and weak results
+route you back to the tutorial. Lesson history and mastery are persisted in
+SQLite without deleting older games or exercises.
+
+Use **3-min game** to play White against a Stockfish computer opponent.
+Both clocks are 3 minutes with no increment. You may select the computer's
+approximate practice tier (600/800/1000/1200). These tiers control Stockfish
+skill but have **not** been calibrated to official human ratings.
+The app records completed game results and presents a deliberately uncertain
+**training estimate**, initially ±350. It is *not* a Chess.com, FIDE, or
+USCF Elo rating. For an external rating, play rated games on a rated platform.
+Your target in the app remains 1,200.
+
+The course and game history are stored only on the current app server and
+survive restarts when persistent storage is configured.

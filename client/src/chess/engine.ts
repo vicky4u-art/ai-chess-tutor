@@ -119,6 +119,12 @@ export class StockfishEngine {
     return this.initPromise;
   }
 
+  /** Configure the bot's search strength before each game move. */
+  setSkill(level: number): void {
+    if (!this.available) return;
+    this.native?.postMessage('setoption name Skill Level value ' + Math.max(0, Math.min(20, Math.round(level))));
+  }
+
   async analyze(fen: string, options: AnalyzeOptions = {}): Promise<EngineAnalysis | null> {
     if (!this.available || !this.native) return null;
     const depth = options.depth ?? 12;

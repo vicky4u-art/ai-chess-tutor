@@ -1,6 +1,6 @@
 /** Progress dashboard: concept mastery, strengths/weaknesses, reviews, trends. */
 import { useEffect, useState } from 'react';
-import type { DashboardData } from '@chesstutor/shared';
+import type { DashboardData, JourneyOverview, RatingSummary } from '@chesstutor/shared';
 import { conceptName } from '../chess/conceptNames';
 import { api, ChessApiError } from '../api';
 import { Btn, Card, ConceptBar, ErrorBox, Loading, SectionTitle } from '../components/ui';
@@ -36,6 +36,8 @@ export function Dashboard({ onStartSession }: { onStartSession: (sessionId: stri
   const [error, setError] = useState<string | null>(null);
   const [minutes, setMinutes] = useState(20);
   const [starting, setStarting] = useState(false);
+  const [journey, setJourney] = useState<JourneyOverview | null>(null);
+  const [rating, setRating] = useState<RatingSummary | null>(null);
 
   const load = () => {
     setError(null);
@@ -46,6 +48,10 @@ export function Dashboard({ onStartSession }: { onStartSession: (sessionId: stri
   };
 
   useEffect(load, []);
+  useEffect(() => {
+    api.journey().then(setJourney).catch(() => {});
+    api.ratingSummary().then(setRating).catch(() => {});
+  }, []);
 
   const start = async () => {
     setStarting(true);
@@ -66,7 +72,23 @@ export function Dashboard({ onStartSession }: { onStartSession: (sessionId: stri
   return (
     <div className="p-4 space-y-4 pb-24">
       <Card>
-        <SectionTitle>Daily lesson</SectionTitle>
+        <p className="text-xs font-semibold text-amber-300 uppercase tracking-wider mb-2">Your training mission</p>
+        <h2 className="text-2xl font-bold mb-1">Road to 1,200</h2>
+        <p className="text-sm text-slate-300 mb-3">Learn → guided tutorial → solve → advance. The next lesson adapts to the skills you demonstrate.</p>
+        <div className="flex justify-between text-sm text-slate-300 mb-2">
+          <span>{journey ? journey.completedCount + ' of ' + journey.totalCount + ' lessons mastered' : 'Your structured learning course'}</span>
+          <span>{rating?.estimate ?? 'Not assessed'} {rating?.estimate != null ? 'training estimate' : ''}</span>
+        </div>
+        {journey && <div className="rounded-full h-2 bg-slate-800 overflow-hidden mb-4">
+          <div className="bg-amber-400 h-2" style={{width: (100 * journey.completedCount / journey.totalCount) + '%'}}/>
+        </div>}
+        <Btn className="w-full" onClick={() => window.location.hash = journey?.recommendedConceptId ? '#/course/' + journey.recommendedConceptId : '#/course'}>
+          {journey?.completedCount ? 'Continue next lesson →' : 'Start structured learning →'}
+        </Btn>
+        <Btn className="w-full mt-2" variant="ghost" onClick={() => window.location.hash = '#/rating'}>Assess with a 3-minute match</Btn>
+      </Card>
+      <Card>
+        <SectionTitle>Extra daily practice</SectionTitle>
         <p className="text-sm text-slate-400 mb-3">
           A personalized {minutes}-minute session: review, instruction, exercises.
         </p>

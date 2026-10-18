@@ -23,6 +23,9 @@ import type {
   Puzzle,
   TutorChatRequest,
   TutorChatResponse,
+  JourneyOverview,
+  JourneyRound,
+  RatingSummary,
 } from '@chesstutor/shared';
 
 const BASE_URL: string =
@@ -182,6 +185,15 @@ export const api = {
   login: (token: string) => post<{ authenticated: boolean }>('/api/auth/login', { token }),
   logout: () => post<{ authenticated: boolean }>('/api/auth/logout'),
   diagnostics: () => get<Diagnostics>('/api/diagnostics'),
+
+  journey: () => get<JourneyOverview>('/api/journey'),
+  startJourneyRound: (conceptId: string) => post<JourneyRound>(`/api/journey/${encodeURIComponent(conceptId)}/start`),
+  journeyRound: (conceptId: string) => get<JourneyRound | null>(`/api/journey/${encodeURIComponent(conceptId)}/round`),
+  answerJourney: (conceptId: string, roundId: string, exerciseId: string, playedUci?: string, hintsUsed = 0, shown = false) =>
+    post<JourneyRound>(`/api/journey/${encodeURIComponent(conceptId)}/answer`, { roundId, exerciseId, playedUci, hintsUsed, shown }),
+  ratingSummary: () => get<RatingSummary>('/api/rating'),
+  recordRatingGame: (data: { botLevel: number; movesUci: string[]; result: 'win' | 'loss' | 'draw'; termination: 'checkmate' | 'draw' | 'timeout' | 'resign'; playerMs: number; botMs: number }) =>
+    post<RatingSummary>('/api/rating/game', data),
 
   getProfile: () => get<Profile>('/api/profile'),
   updateProfile: (displayName: string) => put<Profile>('/api/profile', { displayName }),
