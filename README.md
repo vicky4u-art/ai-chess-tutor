@@ -30,14 +30,14 @@ npm run dev        # server (tsx watch, :3001) + client (Vite) concurrently
 |---|---|
 | `PORT` | Server port (default 3001) |
 | `DATA_DIR` | SQLite directory (default `./data` under server/) |
-| `APP_TOKEN` | Optional bearer token for `/api/*` (leave empty for local-only) |
+| `APP_TOKEN` | Private access token entered at runtime; app issues an HttpOnly SameSite session cookie |
 | `AI_PROVIDER` | `openai` \| `anthropic` \| `compatible` (empty = rule-based coach only) |
 | `AI_API_KEY` | Provider key — server-side only, never sent to the client |
 | `AI_MODEL` | Model name |
 | `AI_BASE_URL` | Required for `compatible` (e.g. local model server) |
 | `AI_MAX_TOKENS` | Cap per tutor reply (default 600) |
 | `VITE_API_URL` | Server URL as seen by the browser |
-| `VITE_APP_TOKEN` | Must match `APP_TOKEN` when set |
+| Client auth | Do not use `VITE_APP_TOKEN`; authentication uses the runtime login form |
 
 ## DB setup
 
@@ -74,3 +74,17 @@ Any Node host / VPS: `npm install && npm run build && npm start`. Serve `client/
 - react-chessboard: GPLv3 (client web app).
 - chess.js: BSD-2. Fastify / Tailwind: MIT.
 - Lichess puzzle data: public domain / CC0 per database.lichess.org.
+
+## Security for Codespaces or a hosted app
+
+The devcontainer requests **private** port forwarding. An already-running
+Codespace may still have a previously selected **public** port. Verify in the
+Codespaces Ports panel that 3101 is Private; changing devcontainer.json alone
+does not change the current forwarded port. Public access without APP_TOKEN
+exposes all games, learning history and write endpoints.
+
+On remotely reachable hosting, set a strong random APP_TOKEN in the **server**
+environment. Enter it in the app's access screen. It is exchanged for a
+one-day HttpOnly SameSite=Strict cookie and never embedded in the frontend.
+Changing APP_TOKEN invalidates sessions. The original bearer header still
+works for scripted API clients.

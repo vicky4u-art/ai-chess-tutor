@@ -247,3 +247,77 @@ describe('progress & export', () => {
     expect(e.json().diag.version).toBeTruthy();
   });
 });
+
+describe('server-verified exercise outcomes', () => {
+  it('does not reward incorrect moves even if the client claims independent success', async () => {
+    const lessons = await app.inject({ method: 'GET', url: '/api/lessons?conceptId=tactics' });
+    const id = lessons.json()[0].id;
+    const detail = await app.inject({ method: 'GET', url: `/api/lessons/${id}` });
+    const ex = detail.json().exercises.find((e: { kind: string }) => e.kind !== 'yes-no') ?? detail.json().exercises[0];
+    const r = await app.inject({ method: 'POST', url: `/api/exercises/${ex.id}/attempt`,
+      payload: { playedUci: 'not-a-move', correct: true, outcome: 'independent', hintsUsed: 0 } });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().correct).toBe(false);
+    expect(r.json().outcome).toBe('shown');
+    expect(r.json().mastery.mastery).toBeLessThan(0.2);
+  });
+  it('never rewards a revealed solution, even when it matches the correct move', async () => {
+    const lessons = await app.inject({ method: 'GET', url: '/api/lessons?conceptId=tactics' });
+    const detail = await app.inject({ method: 'GET', url: `/api/lessons/${lessons.json()[0].id}` });
+    const ex = detail.json().exercises[0];
+    const r = await app.inject({ method: 'POST', url: `/api/exercises/${ex.id}/attempt`,
+      payload: { playedUci: ex.solutionUci[0], outcome: 'shown', correct: true } });
+    expect(r.json().correct).toBe(false);
+    expect(r.json().outcome).toBe('shown');
+  });
+  it('does not seed assessment mastery from a wrong answer claimed as success', async () => {
+    const begin = await app.inject({ method: 'POST', url: '/api/assessment/start' });
+    const { assessmentId, exercises } = begin.json();
+    const ex = exercises[0];
+    const a = await app.inject({ method: 'POST', url: '/api/assessment/answer',
+      payload: { assessmentId, exerciseId: ex.id, playedUci: 'not-a-move', outcome: 'independent', correct: true } });
+    expect(a.json().correct).toBe(false);
+    await app.inject({ method: 'POST', url: '/api/assessment/finish', payload: { assessmentId } });
+    const concepts = (await app.inject({ method: 'GET', url: '/api/concepts' })).json();
+    expect(concepts.find((c: { id: string }) => c.id === ex.conceptId).mastery.mastery).toBeLessThan(0.2);
+  });
+});
+
+describe('incomplete and terminal game analysis', () => {
+  it('never invents an evaluation of the last move when no after-position read exists', async () => {
+    const imported = await app.inject({ method: 'POST', url: '/api/games/import', payload: { pgn: SCHOLARS_MATE } });
+    const gameId = imported.json().game.id;
+    const moves = imported.json().moves;
+    const evals = moves.map((m: { ply: number }) => ({ ply: m.ply, evalCp: 0, bestUci: '' }));
+    const partial = await app.inject({ method: 'POST', url: `/api/games/${gameId}/analyze`, payload: { evals } });
+    expect(partial.json().moves.at(-1).classification).toBe('unanalyzed');
+    const detail1 = await app.inject({ method: 'GET', url: `/api/games/${gameId}` });
+    expect(detail1.json().game.analyzed).toBe(false);
+    // Last position is checkmate for the side to move, evaluated at -100000 cp.
+    const finished = await app.inject({ method: 'POST', url: `/api/games/${gameId}/analyze`,
+      payload: { evals: [...evals, { ply: moves.at(-1).ply + 1, evalCp: -100000, bestUci: '' }] } });
+    expect(finished.json().moves.at(-1).classification).not.toBe('unanalyzed');
+    const detail2 = await app.inject({ method: 'GET', url: `/api/games/${gameId}` });
+    expect(detail2.json().game.analyzed).toBe(true);
+  });
+});
+
+describe('puzzle-driven mastery', () => {
+  it('updates the matching skill and never rewards an incorrect answer', async () => {
+    const p = (await app.inject({ method: 'GET', url: '/api/puzzles/seed-001' })).json();
+    const before = (await app.inject({ method: 'GET', url: '/api/concepts' })).json()
+      .find((x: { id: string }) => x.id === 'rules-checkmates').mastery.mastery;
+    const good = await app.inject({ method: 'POST', url: '/api/puzzles/seed-001/attempt',
+      payload: { solved: true, movesPlayed: p.solutionUci, hintsUsed: 0 } });
+    expect(good.json().correct).toBe(true);
+    const after = (await app.inject({ method: 'GET', url: '/api/concepts' })).json()
+      .find((x: { id: string }) => x.id === 'rules-checkmates').mastery.mastery;
+    expect(after).toBeGreaterThan(before);
+    const wrong = await app.inject({ method: 'POST', url: '/api/puzzles/seed-001/attempt',
+      payload: { solved: true, movesPlayed: ['a1a1'], hintsUsed: 0 } });
+    expect(wrong.json().correct).toBe(false);
+    const reduced = (await app.inject({ method: 'GET', url: '/api/concepts' })).json()
+      .find((x: { id: string }) => x.id === 'rules-checkmates').mastery.mastery;
+    expect(reduced).toBeLessThan(after);
+  });
+});

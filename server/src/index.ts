@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { join, dirname, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getDb } from './db/index.js';
+import { registerAuth } from './auth.js';
 import { seed } from './db/seed.js';
 import { registerRoutes } from './routes.js';
 import { API_VERSION } from '@chesstutor/shared';
@@ -39,14 +40,8 @@ async function main(): Promise<void> {
     reply.header('Cross-Origin-Embedder-Policy', 'require-corp');
   });
 
-  // Optional single-user token.
-  app.addHook('onRequest', async (req, reply) => {
-    if (!APP_TOKEN) return;
-    if (req.url === '/api/health') return;
-    if (req.headers.authorization !== `Bearer ${APP_TOKEN}`) {
-      reply.code(401).send({ error: 'Unauthorized: set Authorization: Bearer <APP_TOKEN>' });
-    }
-  });
+  // API access is protected without blocking the HTML login screen.
+  registerAuth(app, APP_TOKEN);
 
   app.setErrorHandler((err: unknown, _req, reply) => {
     const e = err as { statusCode?: number; message?: string };

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   updateMastery, estimatedStrength, difficultyBand, assessmentSeed,
-  planSession, pickNextPuzzle,
+  planSession, pickNextPuzzle, puzzleConcept,
 } from '../src/learning.js';
 import { emptyMastery, CONCEPTS } from '@chesstutor/shared';
 
@@ -112,5 +112,19 @@ describe('pickNextPuzzle', () => {
   });
   it('returns null when empty', () => {
     expect(pickNextPuzzle([], [], new Set())).toBeNull();
+  });
+});
+
+describe('puzzle themes and learning plans', () => {
+  it('maps mating puzzles to checkmates, hanging pieces to material awareness', () => {
+    expect(puzzleConcept(['mate', 'mateIn1'])).toBe('rules-checkmates');
+    expect(puzzleConcept(['hangingPiece'])).toBe('hanging-pieces');
+    expect(puzzleConcept(['fork'])).toBe('tactics');
+  });
+  it('never schedules a mating puzzle as an unrelated strategic concept', () => {
+    const mastery = CONCEPTS.map((c) => ({ ...emptyMastery(c.id), mastery: 0.5 }));
+    const puzzles = [{ id: 'mate-1', rating: 1200, themes: ['mateIn1'] }];
+    const plan = planSession(mastery, 30, [], [], puzzles);
+    expect(plan.filter((s) => s.kind === 'puzzle').every((s) => s.conceptId === 'rules-checkmates')).toBe(true);
   });
 });

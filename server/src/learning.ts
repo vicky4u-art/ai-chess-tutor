@@ -91,6 +91,15 @@ export interface ExerciseMeta {
 export interface PuzzleMeta {
   id: string;
   rating: number;
+  themes?: string[];
+}
+
+/** Map known puzzle tags to skills. Unknown tactics are conservatively generic. */
+export function puzzleConcept(themes: string[] = []): ConceptId {
+  const tags = new Set(themes.map((t) => t.toLowerCase()));
+  if (tags.has('hangingpiece')) return 'hanging-pieces';
+  if ([...tags].some((t) => t.includes('mate') || t === 'backrankmate')) return 'rules-checkmates';
+  return 'tactics';
 }
 
 /**
@@ -143,6 +152,8 @@ export function planSession(
 
   // 2. Teach weakest concepts: one lesson step (lowest unfinished level) then exercises/puzzles in band.
   const usedLessons = new Set<string>();
+  const usedExercises = new Set<string>();
+  const usedPuzzles = new Set<string>(steps.filter((s) => s.kind === 'puzzle').map((s) => s.refId));
   for (const c of weakestFirst) {
     if (steps.length >= stepBudget) break;
     const m = get(c.id);
@@ -155,15 +166,17 @@ export function planSession(
       steps.push({ kind: 'lesson', refId: lesson.id, conceptId: c.id, label: `Lesson: ${lesson.id}` });
     }
     const band = difficultyBand(m.mastery);
-    const exPool = exercises.filter((e) => e.conceptId === c.id && inBand(e.difficulty, band));
-    const pzPool = puzzles.filter((p) => p.rating >= band.min && p.rating <= band.max);
+    const exPool = exercises.filter((e) => e.conceptId === c.id && !usedExercises.has(e.id) && inBand(e.difficulty, band));
+    const pzPool = puzzles.filter((p) => !usedPuzzles.has(p.id) && puzzleConcept(p.themes) === c.id && p.rating >= band.min && p.rating <= band.max);
     // Alternate exercise / puzzle for variety, deterministic order.
     const ex = exPool.sort((a, b) => a.difficulty - b.difficulty)[0];
     if (ex && steps.length < stepBudget) {
+      usedExercises.add(ex.id);
       steps.push({ kind: 'exercise', refId: ex.id, conceptId: c.id, label: `Practice: ${ex.id}` });
     }
     const pz = pzPool.sort((a, b) => a.rating - b.rating)[0];
     if (pz && steps.length < stepBudget && m.mastery > 0.3) {
+      usedPuzzles.add(pz.id);
       steps.push({ kind: 'puzzle', refId: pz.id, conceptId: c.id, label: `Puzzle: ${pz.id}` });
     }
   }
@@ -180,9 +193,10 @@ export function pickNextPuzzle(
 ): PuzzleMeta | null {
   const avg = mastery.length ? mastery.reduce((s, m) => s + m.mastery, 0) / mastery.length : 0.3;
   const band = difficultyBand(conceptFocus ? (mastery.find((m) => m.conceptId === conceptFocus)?.mastery ?? avg) : avg);
-  const fresh = puzzles.filter((p) => !attemptedIds.has(p.id));
-  const pool = (fresh.length ? fresh : puzzles).filter((p) => p.rating >= band.min && p.rating <= band.max);
-  const finalPool = pool.length ? pool : fresh.length ? fresh : puzzles;
+  const eligible = conceptFocus ? puzzles.filter((p) => puzzleConcept(p.themes) === conceptFocus) : puzzles;
+  const fresh = eligible.filter((p) => !attemptedIds.has(p.id));
+  const pool = (fresh.length ? fresh : eligible).filter((p) => p.rating >= band.min && p.rating <= band.max);
+  const finalPool = pool.length ? pool : fresh.length ? fresh : eligible;
   // Deterministic: lowest rating in band first (gentlest), tie-break by id.
   return finalPool.sort((a, b) => a.rating - b.rating || a.id.localeCompare(b.id))[0] ?? null;
 }

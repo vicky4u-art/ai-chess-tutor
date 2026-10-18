@@ -67,7 +67,7 @@ export function ExerciseRunner({
     setFinished(true);
     setCorrect(ok);
     if (san) setPlayedSan(san);
-    onDone({ outcome: outcome(), timeMs: timeMs(), hintsUsed: hintLevel, playedUci, correct: ok });
+    onDone({ outcome: ok ? outcome() : 'shown', timeMs: timeMs(), hintsUsed: hintLevel, playedUci, correct: ok });
   };
 
   const handleMove = (from: string, to: string, promotion?: string): boolean => {

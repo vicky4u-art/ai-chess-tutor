@@ -19,7 +19,7 @@ import {
   TutorChatResponse,
   emptyMastery,
 } from '@chesstutor/shared';
-import { updateMastery, assessmentSeed, planSession, pickNextPuzzle, difficultyBand } from './learning.js';
+import { updateMastery, assessmentSeed, planSession, pickNextPuzzle, difficultyBand, puzzleConcept } from './learning.js';
 import { parsePgn, extractUciMoves, validatedMoves, isLegalSequence } from './chess.js';
 import { loadAiConfig, chatCompletion, tutorSystemPrompt, ChatMsg } from './ai.js';
 import { fetchChesscomGames, extractGameLink, normalizeUsername } from './chesscom.js';
@@ -146,9 +146,9 @@ function deriveOutcome(body: {
   playedUci?: string;
   hintsUsed?: number;
 }): AttemptOutcome {
-  if (body.outcome && ['independent', 'hinted', 'shown'].includes(body.outcome)) return body.outcome;
-  if (body.correct) return (body.hintsUsed ?? 0) > 0 ? 'hinted' : 'independent';
-  return 'shown';
+  // A client's claimed outcome never overrides the server's move check.
+  if (body.outcome === 'shown' || !body.correct) return 'shown';
+  return (body.hintsUsed ?? 0) > 0 ? 'hinted' : 'independent';
 }
 
 function checkCorrect(ex: { solutionUci: string[]; acceptableUci?: string[][] }, playedUci?: string): boolean {
@@ -230,7 +230,7 @@ export function registerRoutes(app: FastifyInstance, db: DatabaseSync): void {
     async (req) => {
       const ex = getExercise(db, req.params.id);
       const b = req.body ?? {};
-      const correct = b.correct ?? checkCorrect(ex, b.playedUci);
+      const correct = b.outcome !== 'shown' && checkCorrect(ex, b.playedUci);
       const outcome = deriveOutcome({ ...b, correct });
       db.prepare(
         `INSERT INTO exercise_attempts (id, exercise_id, session_id, outcome, hints_used, time_ms, created_at)
@@ -273,7 +273,7 @@ export function registerRoutes(app: FastifyInstance, db: DatabaseSync): void {
     async (req) => {
       const b = req.body;
       const ex = getExercise(db, b.exerciseId);
-      const correct = b.correct ?? checkCorrect(ex, b.playedUci);
+      const correct = b.outcome !== 'shown' && checkCorrect(ex, b.playedUci);
       const outcome = deriveOutcome({ ...b, correct });
       db.prepare(
         `INSERT INTO assessment_answers (assessment_id, exercise_id, outcome, hints_used, time_ms)
@@ -338,8 +338,8 @@ export function registerRoutes(app: FastifyInstance, db: DatabaseSync): void {
     const exercises = (db.prepare(`SELECT id, concept_id, difficulty FROM exercises`).all() as Row[]).map((r) => ({
       id: r.id as string, conceptId: r.concept_id as ConceptId, difficulty: r.difficulty as number,
     }));
-    const puzzles = (db.prepare(`SELECT id, rating FROM puzzles`).all() as Row[]).map((r) => ({
-      id: r.id as string, rating: r.rating as number,
+    const puzzles = (db.prepare(`SELECT id, rating, themes FROM puzzles`).all() as Row[]).map((r) => ({
+      id: r.id as string, rating: r.rating as number, themes: j<string[]>(r.themes),
     }));
     const plan = planSession(mastery, minutes, lessons, exercises, puzzles);
     const id = randomUUID();
@@ -380,8 +380,8 @@ export function registerRoutes(app: FastifyInstance, db: DatabaseSync): void {
   // ---- puzzles ----
   app.get<{ Querystring: { conceptId?: string } }>('/api/puzzles/next', async (req) => {
     const mastery = getMastery(db);
-    const puzzles = (db.prepare(`SELECT id, rating FROM puzzles`).all() as Row[]).map((r) => ({
-      id: r.id as string, rating: r.rating as number,
+    const puzzles = (db.prepare(`SELECT id, rating, themes FROM puzzles`).all() as Row[]).map((r) => ({
+      id: r.id as string, rating: r.rating as number, themes: j<string[]>(r.themes),
     }));
     const attempted = new Set(
       (db.prepare(`SELECT puzzle_id FROM puzzle_attempts ORDER BY created_at DESC LIMIT 300`).all() as Row[])
@@ -404,8 +404,19 @@ export function registerRoutes(app: FastifyInstance, db: DatabaseSync): void {
       const matchesLearner = moves.length === learnerMoves.length && moves.every((m, i) => m === learnerMoves[i]);
       const legal = moves.length > 0 && isLegalSequence(p.fen, moves);
       const correct = legal && (matchesFull || matchesLearner);
-      db.prepare(`INSERT INTO puzzle_attempts (id, puzzle_id, solved, hints_used, time_ms, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
-        .run(randomUUID(), p.id, correct ? 1 : 0, req.body.hintsUsed ?? 0, req.body.timeMs ?? 0, nowIso());
+      // A puzzle updates only the concept its themes actually cover. Never
+      // award mastery from the client's claimed "solved" or "outcome" fields.
+      const conceptId = puzzleConcept(p.themes);
+      const outcome: AttemptOutcome = !correct ? 'shown' : (req.body.hintsUsed ?? 0) > 0 ? 'hinted' : 'independent';
+      transaction(db, () => {
+        db.prepare(`INSERT INTO puzzle_attempts (id, puzzle_id, solved, hints_used, time_ms, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
+          .run(randomUUID(), p.id, correct ? 1 : 0, req.body.hintsUsed ?? 0, req.body.timeMs ?? 0, nowIso());
+        const prev = getMastery(db).find((m) => m.conceptId === conceptId) ?? emptyMastery(conceptId);
+        const streakRow = db.prepare(`SELECT streak FROM mastery WHERE concept_id=?`).get(conceptId) as Row | undefined;
+        const { record, streak } = updateMastery(prev, (streakRow?.streak as number) ?? 0, outcome);
+        saveMastery(db, record, streak);
+      });
+      snapshotToday(db);
       return { correct, solutionUci: p.solutionUci };
     },
   );
@@ -520,21 +531,26 @@ function importPgnGame(db: DatabaseSync, pgnRaw: string, source: string) {
         `UPDATE game_moves SET eval_cp=?, cp_loss=?, classification=?, concept_links=? WHERE game_id=? AND ply=?`,
       );
       const txBody = () => {
+        // Never retain a stale classification from an earlier partial analysis.
+        db.prepare(`UPDATE game_moves SET eval_cp=NULL, cp_loss=NULL, classification='unanalyzed', concept_links='[]' WHERE game_id=?`).run(gameId);
         for (const m of moves) {
           const ply = m.ply as number;
           const ev = evals.get(ply);
-          if (!ev) continue;
           const next = evals.get(ply + 1);
-          // evalCp is side-to-move perspective; cpLoss from the mover's view.
-          const afterMover = next ? -next.evalCp : -ev.evalCp;
-          const cpLoss = Math.max(0, Math.round(ev.evalCp - afterMover));
+          // One eval is needed before AND after a move. In particular, the final
+          // move cannot be scored using its own before-position evaluation.
+          if (!ev || !next || !Number.isFinite(ev.evalCp) || !Number.isFinite(next.evalCp)) continue;
+          // Both scores are from side-to-move perspective. The next score is
+          // from the opponent's perspective, so loss = before + after.
+          const cpLoss = Math.max(0, Math.round(ev.evalCp + next.evalCp));
           const classification = classify(cpLoss, ply, ev.bestUci, m.uci as string);
           const conceptLinks = linkConcepts(m.fen_before as string, m.uci as string, classification);
           upd.run(ev.evalCp, cpLoss, classification, jj(conceptLinks), gameId, ply);
         }
       };
       transaction(db, txBody);
-      db.prepare(`UPDATE games SET analyzed=1 WHERE id=?`).run(gameId);
+      const remaining = (db.prepare(`SELECT COUNT(*) AS n FROM game_moves WHERE game_id=? AND classification='unanalyzed'`).get(gameId) as { n: number }).n;
+      db.prepare(`UPDATE games SET analyzed=? WHERE id=?`).run(moves.length > 0 && remaining === 0 ? 1 : 0, gameId);
       const out = (db.prepare(`SELECT * FROM game_moves WHERE game_id=? ORDER BY ply`).all(gameId) as Row[])
         .map((r) => ({
           ply: r.ply, san: r.san, uci: r.uci, fenBefore: r.fen_before,
@@ -550,6 +566,7 @@ function importPgnGame(db: DatabaseSync, pgnRaw: string, source: string) {
     async (req) => {
       const body = req.body ?? {};
       const fen = body.fen ?? new Chess().fen();
+      try { new Chess(fen); } catch { throw Object.assign(new Error('Invalid position FEN'), { statusCode: 400 }); }
       const history: ChatMsg[] = (body.messages ?? []).slice(-8);
       const mastery = getMastery(db);
       const weak = [...mastery].sort((a, b) => a.mastery - b.mastery).slice(0, 3).map((m) => m.conceptId);
@@ -574,7 +591,7 @@ function importPgnGame(db: DatabaseSync, pgnRaw: string, source: string) {
       let aiConfigured = false;
       if (cfg) {
         try {
-          const system = tutorSystemPrompt({ weakConcepts: weak, recentMistakes: mistakeSummary, engine: body.engine ?? null });
+          const system = tutorSystemPrompt({ fen, weakConcepts: weak, recentMistakes: mistakeSummary, engine: body.engine ?? null });
           reply = await chatCompletion(cfg, system, history);
           aiConfigured = true;
         } catch (e) {

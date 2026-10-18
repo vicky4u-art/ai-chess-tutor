@@ -111,9 +111,8 @@ export function Tutor() {
       {aiConfigured === false && (
         <Card className="border-amber-900">
           <p className="text-sm text-amber-200">
-            AI is not configured on the server. Set the AI provider credentials
-            (see .env.example) to enable conversational coaching. The board,
-            lessons and puzzles work without it.
+            Conversational AI is not configured. You can still use the basic,
+            rule-based coach. Set server-side AI credentials for detailed explanations.
           </p>
         </Card>
       )}
@@ -176,11 +175,11 @@ export function Tutor() {
           onKeyDown={(e) => {
             if (e.key === 'Enter') send(input);
           }}
-          placeholder={aiConfigured === false ? 'AI not configured' : 'Ask about chess…'}
-          disabled={aiConfigured === false || sending}
+          placeholder={aiConfigured === false ? 'Ask the basic chess coach…' : 'Ask about chess…'}
+          disabled={sending}
           className="flex-1 min-h-[48px] bg-slate-900 border border-slate-700 rounded-xl px-4 text-[15px] text-slate-100 placeholder:text-slate-500 disabled:opacity-50"
         />
-        <Btn onClick={() => send(input)} disabled={aiConfigured === false || sending || !input.trim()}>
+        <Btn onClick={() => send(input)} disabled={sending || !input.trim()}>
           Send
         </Btn>
       </div>
