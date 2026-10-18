@@ -14,6 +14,7 @@ jobs:
       APP_TOKEN: 'ui-smoke-test-token'
       UI_TEST_TOKEN: 'ui-smoke-test-token'
       UI_TEST_URL: 'http://127.0.0.1:3101'
+      LIVE_SITE_URL: 'https://chess-tutor-production-9f32.up.railway.app'
       AI_PROVIDER: ''
     steps:
       - uses: actions/checkout@v4
