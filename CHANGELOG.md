@@ -17,3 +17,6 @@ Initial implementation.
 
 ## Unreleased
 - Added .devcontainer/devcontainer.json: one-click GitHub Codespaces setup (Node 22, auto install+build, auto-start server on port 3101, public port forwarding) so the app can be used from a phone browser with no local machine.
+
+## Unreleased
+- Chess.com auto-sync: POST /api/games/import-chesscom pulls recent games via the public Chess.com API (dedup by game Link header); new "Sync from Chess.com" card in Analyze. Also fixed the client API base URL to same-origin so the app works behind any public URL (Replit/Codespaces).

@@ -16,6 +16,8 @@ import type {
   DashboardData,
   Exercise,
   ImportedGame,
+  ChesscomImportRequest,
+  ChesscomImportResponse,
   GameMove,
   Lesson,
   Puzzle,
@@ -24,7 +26,10 @@ import type {
 } from '@chesstutor/shared';
 
 const BASE_URL: string =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3001';
+  (import.meta.env.VITE_API_URL as string | undefined) ?? '';
+// Empty default = same-origin '/api/...' requests. In dev the Vite proxy
+// forwards /api to the API server; in production the API server serves the
+// client itself, so same-origin is correct in both cases.
 
 const TOKEN: string | undefined = import.meta.env.VITE_APP_TOKEN as string | undefined;
 
@@ -208,6 +213,8 @@ export const api = {
 
   importGame: (pgn: string, source: ImportedGame['source'] = 'pgn-upload') =>
     post<GameDetail>('/api/games/import', { pgn, source }),
+  importChesscom: (req: ChesscomImportRequest) =>
+    post<ChesscomImportResponse>('/api/games/import-chesscom', req),
   listGames: () => get<ImportedGame[]>('/api/games'),
   getGame: (id: string) => get<GameDetail>(`/api/games/${encodeURIComponent(id)}`),
   analyzeGame: (id: string, evals: EngineEval[]) =>

@@ -22,6 +22,7 @@ import {
 import { updateMastery, assessmentSeed, planSession, pickNextPuzzle, difficultyBand } from './learning.js';
 import { parsePgn, extractUciMoves, validatedMoves, isLegalSequence } from './chess.js';
 import { loadAiConfig, chatCompletion, tutorSystemPrompt, ChatMsg } from './ai.js';
+import { fetchChesscomGames, extractGameLink, normalizeUsername } from './chesscom.js';
 
 // ---------------------------------------------------------------- helpers
 
@@ -409,34 +410,76 @@ export function registerRoutes(app: FastifyInstance, db: DatabaseSync): void {
     },
   );
 
+/** Shared PGN import used by both manual upload and Chess.com sync. */
+function importPgnGame(db: DatabaseSync, pgnRaw: string, source: string) {
+  const pgn = (pgnRaw ?? '').trim();
+  if (!pgn) throw Object.assign(new Error('Empty PGN'), { statusCode: 400 });
+  let parsed: { sans: string[]; ucis: string[]; fensBefore: string[]; result: string };
+  try {
+    parsed = parsePgn(pgn);
+  } catch (e) {
+    throw Object.assign(new Error(`Invalid PGN: ${(e as Error).message}`), { statusCode: 400 });
+  }
+  const chess = new Chess();
+  chess.loadPgn(pgn);
+  const headers = chess.header();
+  const id = randomUUID();
+  db.prepare(`INSERT INTO games (id, source, white, black, result, pgn, imported_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+    .run(id, source, headers['White'] ?? 'White', headers['Black'] ?? 'Black', parsed.result, pgn, nowIso());
+  const ins = db.prepare(
+    `INSERT INTO game_moves (game_id, ply, san, uci, fen_before, classification, concept_links) VALUES (?, ?, ?, ?, ?, 'unanalyzed', '[]')`,
+  );
+  const txBody = () => {
+    parsed.sans.forEach((san, i) => ins.run(id, i + 1, san, parsed.ucis[i], parsed.fensBefore[i]));
+  };
+  transaction(db, txBody);
+  const moves: GameMove[] = parsed.sans.map((san, i) => ({
+    ply: i + 1, san, uci: parsed.ucis[i], fenBefore: parsed.fensBefore[i],
+    evalCp: null, cpLoss: null, classification: 'unanalyzed' as const, conceptLinks: [],
+  }));
+  return {
+    game: {
+      id, source, white: headers['White'] ?? 'White', black: headers['Black'] ?? 'Black',
+      result: parsed.result, importedAt: nowIso(), moveCount: parsed.sans.length, analyzed: false,
+    },
+    pgn, moves,
+  };
+}
+
   // ---- games ----
   app.post<{ Body: { pgn: string; source?: string } }>('/api/games/import', async (req) => {
-    const pgn = (req.body.pgn ?? '').trim();
-    if (!pgn) throw Object.assign(new Error('Empty PGN'), { statusCode: 400 });
-    let parsed: { sans: string[]; ucis: string[]; fensBefore: string[]; result: string };
-    try {
-      parsed = parsePgn(pgn);
-    } catch (e) {
-      throw Object.assign(new Error(`Invalid PGN: ${(e as Error).message}`), { statusCode: 400 });
-    }
-    const chess = new Chess();
-    chess.loadPgn(pgn);
-    const headers = chess.header();
-    const id = randomUUID();
-    db.prepare(`INSERT INTO games (id, source, white, black, result, pgn, imported_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-      .run(id, req.body.source ?? 'pgn-upload', headers['White'] ?? 'White', headers['Black'] ?? 'Black', parsed.result, pgn, nowIso());
-    const ins = db.prepare(
-      `INSERT INTO game_moves (game_id, ply, san, uci, fen_before, classification, concept_links) VALUES (?, ?, ?, ?, ?, 'unanalyzed', '[]')`,
+    return importPgnGame(db, req.body.pgn ?? '', req.body.source ?? 'pgn-upload');
+  });
+
+  app.post<{ Body: { username: string; maxGames?: number } }>('/api/games/import-chesscom', async (req) => {
+    const username = normalizeUsername(req.body.username ?? '');
+    const maxGames = Math.min(Math.max(req.body.maxGames ?? 30, 1), 200);
+    const fetched = await fetchChesscomGames(username, maxGames);
+    // Dedup: skip games already imported (matched by their chess.com Link header).
+    const knownLinks = new Set(
+      (db.prepare(`SELECT pgn FROM games WHERE source='chesscom'`).all() as Row[])
+        .map((r) => extractGameLink(r.pgn as string))
+        .filter((l): l is string => !!l),
     );
-    const txBody = () => {
-      parsed.sans.forEach((san, i) => ins.run(id, i + 1, san, parsed.ucis[i], parsed.fensBefore[i]));
-    };
-    transaction(db, txBody);
-    const moves: GameMove[] = parsed.sans.map((san, i) => ({
-      ply: i + 1, san, uci: parsed.ucis[i], fenBefore: parsed.fensBefore[i],
-      evalCp: null, cpLoss: null, classification: 'unanalyzed' as const, conceptLinks: [],
-    }));
-    return { game: { id, source: req.body.source ?? 'pgn-upload', white: headers['White'] ?? 'White', black: headers['Black'] ?? 'Black', result: parsed.result, importedAt: nowIso(), moveCount: parsed.sans.length, analyzed: false }, pgn, moves };
+    let imported = 0;
+    let skipped = 0;
+    const games: unknown[] = [];
+    for (const g of fetched) {
+      const link = extractGameLink(g.pgn) ?? g.url;
+      if (link && knownLinks.has(link)) {
+        skipped++;
+        continue;
+      }
+      try {
+        const res = importPgnGame(db, g.pgn, 'chesscom');
+        imported++;
+        games.push(res.game);
+        if (link) knownLinks.add(link);
+      } catch {
+        skipped++; // unparseable PGN — skip rather than failing the whole sync
+      }
+    }
+    return { username, fetched: fetched.length, imported, skipped, games };
   });
 
   app.get('/api/games', async () => {

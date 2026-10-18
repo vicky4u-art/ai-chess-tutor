@@ -154,6 +154,69 @@ describe('games', () => {
   });
 });
 
+describe('chess.com sync', () => {
+  const PGN1 = `[White "hggv135v"]\n[Black "opp1"]\n[Result "1-0"]\n[Link "https://www.chess.com/game/live/111"]\n\n1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7# 1-0`;
+  const PGN2 = `[White "opp2"]\n[Black "hggv135v"]\n[Result "0-1"]\n[Link "https://www.chess.com/game/live/222"]\n\n1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 0-1`;
+
+  function mockFetch() {
+    return vi.stubGlobal('fetch', async (url: string) => {
+      const u = String(url);
+      if (u.endsWith('/pub/player/testuser')) {
+        return { ok: true, status: 200, json: async () => ({ username: 'testuser' }) };
+      }
+      if (u.endsWith('/pub/player/nonexistentuser9z')) {
+        return { ok: false, status: 404, json: async () => ({}) };
+      }
+      if (u.endsWith('/games/archives')) {
+        return { ok: true, status: 200, json: async () => ({ archives: ['https://api.chess.com/pub/player/testuser/games/2026/10'] }) };
+      }
+      if (u.endsWith('/games/2026/10')) {
+        return {
+          ok: true, status: 200,
+          json: async () => ({ games: [{ pgn: PGN1, url: 'https://www.chess.com/game/live/111' }, { pgn: PGN2, url: 'https://www.chess.com/game/live/222' }] }),
+        };
+      }
+      throw new Error('unexpected fetch: ' + u);
+    });
+  }
+
+  it('imports recent games and dedups on re-sync', async () => {
+    mockFetch();
+    try {
+      const r1 = await app.inject({ method: 'POST', url: '/api/games/import-chesscom', payload: { username: 'TestUser', maxGames: 10 } });
+      expect(r1.statusCode).toBe(200);
+      const b1 = r1.json();
+      expect(b1.username).toBe('testuser');
+      expect(b1.fetched).toBe(2);
+      expect(b1.imported).toBe(2);
+      expect(b1.skipped).toBe(0);
+      expect(b1.games.length).toBe(2);
+      // Re-sync: both already imported -> skipped
+      const r2 = await app.inject({ method: 'POST', url: '/api/games/import-chesscom', payload: { username: 'testuser', maxGames: 10 } });
+      const b2 = r2.json();
+      expect(b2.imported).toBe(0);
+      expect(b2.skipped).toBe(2);
+      // Games list shows chesscom source
+      const list = await app.inject({ method: 'GET', url: '/api/games' });
+      expect(list.json().filter((g: { source: string }) => g.source === 'chesscom').length).toBe(2);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('rejects unknown users and bad usernames', async () => {
+    mockFetch();
+    try {
+      const r1 = await app.inject({ method: 'POST', url: '/api/games/import-chesscom', payload: { username: 'nonexistentuser9z' } });
+      expect(r1.statusCode).toBe(404);
+      const r2 = await app.inject({ method: 'POST', url: '/api/games/import-chesscom', payload: { username: 'x!' } });
+      expect(r2.statusCode).toBe(400);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
 describe('tutor without AI key', () => {
   it('returns coach-lite reply and validates moves', async () => {
     const r = await app.inject({

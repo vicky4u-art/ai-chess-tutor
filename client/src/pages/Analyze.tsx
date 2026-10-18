@@ -44,6 +44,9 @@ export function Analyze() {
   const [games, setGames] = useState<ImportedGame[] | null>(null);
   const [detail, setDetail] = useState<GameDetail | null>(null);
   const [pgn, setPgn] = useState('');
+  const [ccUser, setCcUser] = useState('');
+  const [ccImporting, setCcImporting] = useState(false);
+  const [ccMsg, setCcMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -64,6 +67,29 @@ export function Analyze() {
       game.loadPgn(d.pgn);
     } catch (e) {
       setError(e instanceof ChessApiError ? e.message : 'Could not open the game.');
+    }
+  };
+
+  const doChesscomImport = async () => {
+    if (!ccUser.trim()) return;
+    setCcImporting(true);
+    setError(null);
+    setCcMsg(null);
+    try {
+      const r = await api.importChesscom({ username: ccUser.trim(), maxGames: 30 });
+      setCcMsg(
+        r.imported > 0
+          ? `Imported ${r.imported} game${r.imported === 1 ? '' : 's'} from ${r.username}${r.skipped ? ` (${r.skipped} already imported)` : ''}.`
+          : r.skipped > 0
+            ? `No new games — ${r.skipped} already imported from ${r.username}.`
+            : `No games found for ${r.username}.`,
+      );
+      const list = await api.listGames().catch(() => null);
+      if (list) setGames(list);
+    } catch (e) {
+      setError(e instanceof ChessApiError ? e.message : 'Chess.com import failed.');
+    } finally {
+      setCcImporting(false);
     }
   };
 
@@ -237,6 +263,26 @@ export function Analyze() {
     <div className="p-4 pb-24 space-y-4">
       <SectionTitle>Analyze your games</SectionTitle>
       {error && <ErrorBox message={error} />}
+      <Card>
+        <SectionTitle>Sync from Chess.com</SectionTitle>
+        <p className="text-sm text-slate-400 mb-3">
+          Pull your recent games straight from Chess.com — no PGN files needed.
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          <input
+            value={ccUser}
+            onChange={(e) => setCcUser(e.target.value)}
+            placeholder="Chess.com username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            className="flex-1 min-w-[160px] bg-slate-950 border border-slate-800 rounded-xl p-3 text-[15px] text-slate-200"
+          />
+          <Btn onClick={doChesscomImport} disabled={ccImporting || !ccUser.trim()}>
+            {ccImporting ? 'Syncing…' : 'Import last 30'}
+          </Btn>
+        </div>
+        {ccMsg && <p className="text-sm text-emerald-300 mt-2">{ccMsg}</p>}
+      </Card>
       <Card>
         <SectionTitle>Paste PGN</SectionTitle>
         <textarea

@@ -194,6 +194,22 @@ export interface ImportedGame {
   analyzed: boolean;
 }
 
+export interface ChesscomImportRequest {
+  username: string;
+  /** Max recent games to pull (1-200, default 30). */
+  maxGames?: number;
+}
+
+export interface ChesscomImportResponse {
+  username: string;
+  /** Games seen in the fetched archives (before dedup). */
+  fetched: number;
+  imported: number;
+  /** Already imported before, or unparseable. */
+  skipped: number;
+  games: ImportedGame[];
+}
+
 // ---------------------------------------------------------------------------
 // AI tutor
 // ---------------------------------------------------------------------------
