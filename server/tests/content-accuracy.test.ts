@@ -90,3 +90,35 @@ describe('authored content upgrades without destroying progress', () => {
     }
   });
 });
+
+describe('multiple objectively correct winning moves', () => {
+  it('accepts both queen and rook mate for the calculation exercise', () => {
+    const ex = byId('ex-cal-1');
+    expect(ex.acceptableUci).toContainEqual(['a1a8']);
+    for (const u of ['e1e8', 'a1a8']) {
+      const board = new Chess(ex.fen);
+      move(board, u);
+      expect(board.isCheckmate()).toBe(true);
+    }
+  });
+  it('accepts both double-check moves and explains their tactical distinction', () => {
+    const ex = byId('ex-tac-3');
+    expect(ex.acceptableUci).toContainEqual(['e4d6']);
+    for (const u of ['e4f6', 'e4d6']) {
+      const board = new Chess(ex.fen);
+      move(board, u);
+      expect(board.isCheck()).toBe(true);
+      const king = board.board().flat().find((p) => p?.type === 'k' && p.color === 'b')!;
+      expect(board.isAttacked(king.square, 'w')).toBe(true);
+    }
+  });
+  it('calculation scenario forces an equal minor-piece trade followed by a pawn capture', () => {
+    const ex = byId('ex-cal-2');
+    const board = new Chess(ex.fen);
+    move(board, 'b5c6');
+    move(board, 'd7c6');
+    const taken = move(board, 'f3e5');
+    expect(taken.captured).toBe('p');
+    expect(ex.solutionUci[0]).toBe('b5c6');
+  });
+});
