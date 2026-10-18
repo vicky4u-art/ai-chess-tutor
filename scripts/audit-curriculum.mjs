@@ -4,8 +4,8 @@ import { readFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { Chess } from 'chess.js';
-function load(name) {
-  let s=readFileSync('server/src/data/curriculum.ts','utf8');
+function load(name, filename = 'server/src/data/curriculum.ts') {
+  let s=readFileSync(filename,'utf8');
   s=s.replace(/^import type .*$/gm,'').replace(/export const (\w+): \w+\[\] =/g,'const $1 =');
   return new Function(s+'; return '+name+';')();
 }
@@ -67,5 +67,16 @@ for(const e of EXERCISES){
   }
   all.push(result);
   console.log(JSON.stringify(result));
+}
+const SEED_PUZZLES=load('SEED_PUZZLES','server/src/data/seed-puzzles.ts');
+for(const p of SEED_PUZZLES){
+  const c=new Chess(p.fen),side=c.turn(),opp=side==='w'?'b':'w';
+  let king=null;
+  for(const row of c.board())for(const sq of row)if(sq?.type==='k'&&sq.color===opp)king=sq.square;
+  const invalid=king&&c.isAttacked(king,side);
+  const m1=p.themes.includes('mateIn1');
+  const legal=c.moves({verbose:true});
+  const mates=m1?legal.filter(move=>{const test=new Chess(p.fen);test.move(move);return test.isCheckmate();}).map(move=>move.from+move.to+(move.promotion??'')):[];
+  console.log(JSON.stringify({puzzle:p.id,illegal:invalid,mateIn1:m1,choicesMate:mates,expected:p.solutionUci[0],fen:p.fen}));
 }
 sf.stdin.write('quit\n');sf.kill();
