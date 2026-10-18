@@ -9,10 +9,14 @@ import { Analyze } from './pages/Analyze';
 import { Tutor } from './pages/Tutor';
 import { Diagnostics } from './pages/Diagnostics';
 import { Session } from './pages/Session';
+import { Course } from './pages/Course';
+import { RatingMatch } from './pages/RatingMatch';
 
 type Route =
   | { name: 'dashboard' }
   | { name: 'assessment' }
+  | { name: 'course'; conceptId?: string }
+  | { name: 'rating' }
   | { name: 'learn'; lessonId?: string }
   | { name: 'puzzles' }
   | { name: 'analyze' }
@@ -26,6 +30,10 @@ function parseHash(): Route {
   switch (path) {
     case 'assessment':
       return { name: 'assessment' };
+    case 'course':
+      return { name: 'course', conceptId: param || undefined };
+    case 'rating':
+      return { name: 'rating' };
     case 'learn':
       return { name: 'learn', lessonId: param || undefined };
     case 'puzzles':
@@ -45,9 +53,9 @@ function parseHash(): Route {
 
 const TABS: { route: string; label: string }[] = [
   { route: '#/dashboard', label: 'Home' },
-  { route: '#/learn', label: 'Learn' },
+  { route: '#/course', label: 'Lessons' },
+  { route: '#/rating', label: '3-min game' },
   { route: '#/puzzles', label: 'Puzzles' },
-  { route: '#/analyze', label: 'Analyze' },
   { route: '#/tutor', label: 'Tutor' },
 ];
 
@@ -58,6 +66,8 @@ function tabFor(route: Route): string {
       return '#/dashboard';
     case 'assessment':
       return '#/dashboard';
+    case 'learn':
+      return '#/course';
     default:
       return `#/${route.name}`;
   }
@@ -146,6 +156,11 @@ export function App() {
           <Dashboard onStartSession={(id) => (window.location.hash = `#/session/${id}`)} />
         )}
         {route.name === 'assessment' && <Assessment />}
+        {route.name === 'course' && (
+          <Course conceptId={route.conceptId}
+            onOpen={(id) => (window.location.hash = id ? '#/course/' + id : '#/course')} />
+        )}
+        {route.name === 'rating' && <RatingMatch />}
         {route.name === 'learn' && (
           <Learn
             lessonId={route.lessonId}
