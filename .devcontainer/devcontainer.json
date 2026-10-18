@@ -1,1 +1,19 @@
-{"forwardPorts":[3101],"image":"mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm","name":"AI Chess Tutor","portsAttributes":{"3101":{"label":"Chess Tutor app","onAutoForward":"notify","visibility":"public"}},"postCreateCommand":"npm install && npm run build","postStartCommand":"bash -c 'curl -sf http://localhost:3101/api/health >/dev/null || (cd /workspaces/ai-chess-tutor && nohup npm start > /tmp/chess-tutor.log 2>&1 &)'"}
+{
+  "name": "AI Chess Tutor",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "containerEnv": {
+    "PORT": "3101"
+  },
+  "postCreateCommand": "npm install && npm run build",
+  "postStartCommand": "bash -c 'curl -sf http://localhost:3101/api/health >/dev/null || (cd /workspaces/ai-chess-tutor && nohup npm start > /tmp/chess-tutor.log 2>&1 &)'",
+  "forwardPorts": [
+    3101
+  ],
+  "portsAttributes": {
+    "3101": {
+      "label": "Chess Tutor app",
+      "onAutoForward": "notify",
+      "visibility": "public"
+    }
+  }
+}
