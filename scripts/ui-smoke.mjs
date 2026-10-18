@@ -20,8 +20,11 @@ async function test(name, fn) {
   } catch (e) {
     results.push({ name, status: 'FAIL', reason: String(e) });
     console.error('FAIL: ' + name, e);
+    const visible = await page?.locator('body').innerText().catch(() => 'no page content');
+    console.error('VISIBLE PAGE AT FAILURE: ' + String(visible).slice(0, 2400));
+    console.error('CURRENT URL: ' + page?.url());
     await shot('failure-' + name.replaceAll(/[^a-z0-9]+/gi, '-'));
-    throw e;
+    // Continue to the other screens; report overall failure at the end.
   }
 }
 async function noOverflow(label) {
@@ -143,4 +146,5 @@ try {
   console.log('UI smoke test results: ' + JSON.stringify(results));
   await context?.close().catch(() => {});
   await browser.close();
+  if (results.some((r) => r.status === 'FAIL')) process.exitCode = 1;
 }
