@@ -35,6 +35,7 @@ function analyze(fen,movetime=150){
   });
 }
 const all=[];
+const problems=[];
 for(const e of EXERCISES){
   const c=new Chess(e.fen);
   const color=c.turn(),opp=color==='w'?'b':'w';
@@ -46,6 +47,7 @@ for(const e of EXERCISES){
   if(e.kind!=='yes-no'){
     if(invalidPre) {
       result.error='INVALID POSITION: the player to move already attacks the opponent king';
+      problems.push(e.id + ': nonmoving king was already in check');
       all.push(result); console.log(JSON.stringify(result)); continue;
     }
     result.current=await analyze(c.fen(),170);
@@ -67,6 +69,11 @@ for(const e of EXERCISES){
   }
   all.push(result);
   console.log(JSON.stringify(result));
+  if (result.invalidPre || result.error) problems.push(e.id + ': impossible/invalid chess position');
+  // Material mistakes and missed forced mates must fail CI, not merely be logged.
+  if (result.cpLoss != null && result.cpLoss > 175) problems.push(e.id + ': selected move loses ' + result.cpLoss + ' centipawns vs engine best');
+  if (/mate in (?:one|1)|which move checkmates|mates immediately|immediate checkmate|deliver checkmate/i.test(e.prompt)
+      && !result.givesMate) problems.push(e.id + ': claimed checkmate fails');
 }
 const SEED_PUZZLES=load('SEED_PUZZLES','server/src/data/seed-puzzles.ts');
 for(const p of SEED_PUZZLES){
@@ -78,5 +85,16 @@ for(const p of SEED_PUZZLES){
   const legal=c.moves({verbose:true});
   const mates=m1?legal.filter(move=>{const test=new Chess(p.fen);test.move(move);return test.isCheckmate();}).map(move=>move.from+move.to+(move.promotion??'')):[];
   console.log(JSON.stringify({puzzle:p.id,illegal:invalid,mateIn1:m1,choicesMate:mates,expected:p.solutionUci[0],fen:p.fen}));
+  if (invalid) problems.push(p.id + ': illegal starting position');
+  if (m1 && (mates.length !== 1 || mates[0] !== p.solutionUci[0])) {
+    problems.push(p.id + ': mate-in-one puzzle has a missing or uncredited alternate solution: ' + mates.join(','));
+  }
 }
 sf.stdin.write('quit\n');sf.kill();
+if(problems.length){
+  console.error('CURRICULUM AUDIT FAILURE: ' + problems.length + ' problems');
+  for(const message of problems)console.error(' - '+message);
+  process.exitCode=1;
+}else{
+  console.log('CURRICULUM AUDIT PASSED: 60 exercises and 48 puzzle positions checked.');
+}
